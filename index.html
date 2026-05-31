@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Generator RPP Deep Learning terintegrasi dengan 8 Indikator Observasi PMM terbaru. Buat RPP dan Instrumen Asesmen dengan cerdas dan cepat.">
+    <meta name="description" content="Generator RPP Deep Learning terintegrasi dengan 8 Indikator Observasi PMM dan Database CP BSKAP 2026 terbaru. Buat RPP dengan cerdas dan cepat.">
     <title>Smart RPP Generator Pro</title>
     
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -57,7 +57,148 @@
     <script type="text/babel">
         const { useState, useEffect, useId } = React;
 
-        // --- ENGINE DATA PMM (Terbaru - 8 Indikator x 3 Fokus x 3 Perilaku) ---
+        // --- BSKAP NO 046/H/KR/2026 CURRICULUM DATABASE FRAMEWORK (FULL ENTERPRISE) ---
+        const DATABASE_KURIKULUM = {
+            "PAUD (Fase Fondasi)": {
+                "Nilai Agama & Budi Pekerti": { 
+                    "Pemahaman & Praktik": "Anak mengenali dan mempraktikkan nilai ajaran agamanya, menunjukkan sikap menyayangi sesama makhluk hidup, serta menjaga kebersihan dan merawat diri maupun alam sekitar sebagai wujud syukur." 
+                },
+                "Jati Diri": { 
+                    "Pengelolaan Diri": "Anak mengenali identitas diri, mengontrol dan mengekspresikan emosi dengan wajar, bangga terhadap latar belakang budayanya, serta memiliki kemampuan motorik yang matang untuk berpartisipasi di lingkungannya." 
+                },
+                "Literasi & STEAM": { 
+                    "Eksplorasi Kognitif": "Anak menunjukkan kemampuan dasar literasi (menyimak, membaca, menulis prabaca), berhitung awal, serta mampu mengeksplorasi berbagai media seni dan teknologi sederhana untuk memecahkan masalah sehari-hari." 
+                }
+            },
+            "Fase A (SD Kelas 1-2)": {
+                "Pendidikan Pancasila": {
+                    "Pancasila": "Peserta didik mampu mengenal simbol dan sila Pancasila dalam lambang negara Garuda Pancasila, serta menceritakan hubungan simbol dengan sila secara lisan dan tulisan.",
+                    "UUD 1945 & Aturan": "Peserta didik mengidentifikasi aturan di rumah dan di sekolah, serta melaksanakannya dengan bimbingan orang tua dan guru."
+                },
+                "Bahasa Indonesia": {
+                    "Membaca & Memirsa": "Peserta didik mampu membaca kata-kata yang sering ditemui dengan fasih, memahami informasi dari tayangan teks atau gambar sederhana yang dilihat.",
+                    "Menulis": "Peserta didik mampu menulis teks deskripsi sederhana dengan beberapa kalimat untuk menggambarkan pengalaman, benda, atau orang."
+                },
+                "Matematika": {
+                    "Bilangan": "Peserta didik dapat membaca, menulis, menentukan nilai tempat, dan membandingkan bilangan cacah sampai dengan 100, serta melakukan operasi penjumlahan dan pengurangan.",
+                    "Geometri": "Peserta didik dapat mengenal berbagai bangun datar dan bangun ruang sederhana, serta membedakannya berdasarkan ciri-ciri fisik."
+                },
+                "Seni Budaya": {
+                    "Menciptakan": "Peserta didik mampu menciptakan karya seni rupa, musik, atau tari sederhana berdasarkan pengalaman keseharian dengan menggunakan elemen dasar seni."
+                },
+                "PJOK": {
+                    "Keterampilan Gerak": "Peserta didik menunjukkan kemampuan dalam menirukan pola gerak dasar lokomotor, non-lokomotor, dan manipulatif pada permainan sederhana."
+                }
+            },
+            "Fase B (SD Kelas 3-4)": {
+                "Pendidikan Pancasila": {
+                    "Bhinneka Tunggal Ika": "Peserta didik mampu mengidentifikasi dan menghargai keragaman identitas diri, suku bangsa, agama, dan budaya di lingkungan sekitarnya."
+                },
+                "Bahasa Indonesia": {
+                    "Membaca & Memirsa": "Peserta didik mampu memahami pesan dan informasi tentang kehidupan sehari-hari dari teks narasi dan puisi anak, serta menyimpulkan ide pokok.",
+                    "Berbicara & Mempresentasikan": "Peserta didik mampu berbicara dengan santun, menceritakan kembali isi teks yang dibaca dengan volume dan intonasi yang tepat."
+                },
+                "Matematika": {
+                    "Bilangan": "Peserta didik membaca, menulis, dan mengurutkan bilangan cacah sampai 10.000, serta melakukan operasi perkalian dan pembagian dasar.",
+                    "Pengukuran": "Peserta didik mengukur panjang dan berat benda menggunakan satuan baku, serta menentukan luas dan keliling bangun datar."
+                },
+                "Ilmu Pengetahuan Alam & Sosial (IPAS)": {
+                    "Pemahaman IPAS": "Peserta didik memahami siklus hidup makhluk hidup, wujud zat dan perubahannya, bentuk energi, serta bentang alam dan kearifan lokal di daerahnya.",
+                    "Keterampilan Proses": "Peserta didik melakukan penyelidikan sederhana, mengumpulkan data kualitatif, dan menyajikan hasil pengamatan secara lisan maupun tertulis."
+                },
+                "Seni Budaya": {
+                    "Merefleksikan": "Peserta didik mulai mengenali dan memberikan apresiasi terhadap karya seni teman sebayanya dengan menggunakan bahasa sehari-hari."
+                },
+                "Bahasa Inggris": {
+                    "Menyimak - Berbicara": "Peserta didik memahami dan merespons ungkapan sapaan, perkenalan diri, dan instruksi sederhana di dalam ruang kelas."
+                },
+                "PJOK": {
+                    "Pengetahuan Gerak": "Peserta didik memahami prosedur variasi dan kombinasi pola gerak dasar dalam permainan invasi atau net yang dimodifikasi."
+                }
+            },
+            "Fase C (SD Kelas 5-6)": {
+                "Pendidikan Pancasila": {
+                    "NKRI": "Peserta didik memahami makna kesatuan wilayah dan pemerintahan negara Indonesia, serta menunjukkan sikap gotong royong dalam menjaga persatuan."
+                },
+                "Bahasa Indonesia": {
+                    "Membaca & Memirsa": "Peserta didik memahami informasi dan kosakata baru dari teks fiksi dan non-fiksi, serta mengevaluasi argumen dalam teks persuasif.",
+                    "Menulis": "Peserta didik mampu menulis teks eksplanasi, laporan hasil pengamatan, dan teks narasi dengan ejaan dan struktur kalimat yang tepat."
+                },
+                "Matematika": {
+                    "Bilangan": "Peserta didik melakukan operasi hitung pecahan dan desimal, memahami rasio, dan memecahkan masalah kontekstual terkait aritmetika sosial sederhana.",
+                    "Analisis Data": "Peserta didik dapat mengumpulkan, menyajikan, dan menganalisis data menggunakan diagram batang dan diagram lingkaran."
+                },
+                "Ilmu Pengetahuan Alam & Sosial (IPAS)": {
+                    "Pemahaman IPAS": "Peserta didik menganalisis sistem organ tubuh manusia, interaksi ekosistem, sifat bunyi dan cahaya, sejarah kemerdekaan, dan sistem tata surya.",
+                    "Keterampilan Proses": "Peserta didik merencanakan dan melakukan eksperimen ilmiah, menganalisis data, menarik kesimpulan, dan mengomunikasikannya menggunakan media."
+                },
+                "PJOK": {
+                    "Pemanfaatan Gerak": "Peserta didik mengaplikasikan keterampilan gerak spesifik dalam permainan olahraga yang dimodifikasi untuk meningkatkan kebugaran jasmani."
+                },
+                "Bahasa Inggris": {
+                    "Membaca - Memirsa": "Peserta didik membaca dan memahami teks deskriptif dan prosedur pendek tentang aktivitas sehari-hari menggunakan kosakata dasar."
+                }
+            },
+            "Fase D (SMP/MTs Grade 7-9)": {
+                "Pendidikan Agama & Budi Pekerti": {
+                    "Akhlak": "Peserta didik merefleksikan nilai-nilai keagamaan dalam perilaku sehari-hari, berakhlak mulia terhadap diri, sesama, alam, dan negara."
+                },
+                "Pendidikan Pancasila": {
+                    "Pancasila": "Peserta didik menganalisis dinamika perwujudan Pancasila sebagai dasar negara dan pandangan hidup bangsa dalam kehidupan bermasyarakat.",
+                    "UUD NRI 1945": "Peserta didik memahami kedudukan dan makna UUD 1945, serta mematuhi peraturan perundang-undangan nasional yang berlaku."
+                },
+                "Bahasa Indonesia": {
+                    "Membaca & Memirsa": "Peserta didik mengeksplorasi, menyimpulkan, dan mengevaluasi gagasan, pandangan, atau pesan dari teks deskripsi, narasi, puisi, eksplanasi, dan argumentasi.",
+                    "Menulis": "Peserta didik menulis gagasan secara logis dan kritis dalam bentuk artikel ilmiah populer, teks ulasan, dan karya sastra pendek."
+                },
+                "Matematika": {
+                    "Aljabar": "Peserta didik mengenali pola, menyelesaikan persamaan dan pertidaksamaan linear satu variabel, serta menerapkan relasi dan fungsi linear.",
+                    "Geometri": "Peserta didik menjelaskan sifat-sifat bangun ruang sisi datar dan lengkung, menggunakan Teorema Pythagoras, dan melakukan transformasi geometri."
+                },
+                "Ilmu Pengetahuan Alam (IPA)": {
+                    "Pemahaman IPA": "Peserta didik memahami klasifikasi zat, struktur sel, sistem organ manusia, pewarisan sifat, mekanika Newton, gelombang, kelistrikan, dan dinamika bumi/tata surya.",
+                    "Keterampilan Proses": "Peserta didik melakukan penyelidikan ilmiah utuh: merumuskan masalah, hipotesis, eksperimen, analisis data, dan presentasi laporan ilmiah."
+                },
+                "Ilmu Pengetahuan Sosial (IPS)": {
+                    "Pemahaman IPS": "Peserta didik menganalisis kondisi geografis Indonesia, dinamika interaksi sosial, proses kesejarahan bangsa, dan kegiatan ekonomi dalam memenuhi kebutuhan.",
+                    "Keterampilan Proses": "Peserta didik mengumpulkan data primer dan sekunder, menganalisis informasi keruangan dan waktu, serta memublikasikan hasil riset sosial sederhana."
+                },
+                "Informatika": {
+                    "Berpikir Komputasional (BK)": "Peserta didik menerapkan berpikir komputasional untuk memecahkan persoalan data diskrit dan mengabstraksikan algoritma solusi terstruktur.",
+                    "Algoritma & Pemrograman (AP)": "Peserta didik membuat program menggunakan bahasa pemrograman visual/tekstual untuk mengolah data dan mengontrol perangkat keras/robotik sederhana."
+                },
+                "Bahasa Inggris": {
+                    "Menulis - Mempresentasikan": "Peserta didik menyusun dan mempresentasikan teks lisan maupun tulis terstruktur (recount, narrative, procedure) terkait topik personal dan lingkungan."
+                },
+                "PJOK": {
+                    "Keterampilan & Analisis Gerak": "Peserta didik mempraktikkan dan menganalisis gerak spesifik dalam berbagai permainan invasi, net, lapangan, atletik, dan bela diri."
+                },
+                "Seni Budaya": {
+                    "Penciptaan Berdampak": "Peserta didik merancang, memproduksi, dan menyajikan karya seni (rupa/musik/tari/teater) yang merespons isu sosial di lingkungan sekitarnya."
+                },
+                "Prakarya (Budi Daya/Kerajinan)": {
+                    "Desain & Produksi": "Peserta didik merancang dan membuat produk kerajinan/budi daya bernilai guna berdasarkan potensi sumber daya alam lokal."
+                }
+            },
+            "Fase E (SMA/SMK Kelas 10)": {
+                "Sains Inti (Fisika, Kimia, Biologi)": { 
+                    "Analisis Makro": "Peserta didik mampu mengevaluasi fenomena ilmiah global (perubahan iklim, energi alternatif), menerapkan metode penelitian mandiri, dan menyusun laporan berbasis data valid." 
+                },
+                "Ilmu Sosial Inti (Sosiologi, Geografi, Sejarah, Ekonomi)": {
+                    "Analisis Dinamika Sosial": "Peserta didik menganalisis fenomena sosial, mitigasi bencana, kronologi sejarah kemerdekaan, dan memecahkan masalah ekonomi dengan prinsip literasi finansial."
+                },
+                "Bahasa & Sastra": {
+                    "Analisis Kritis & Kreatif": "Peserta didik mengevaluasi informasi kompleks dari teks sastra dan non-sastra, menyusun esai argumentatif, serta memproduksi karya kreatif terpublikasi."
+                }
+            },
+            "Fase F (SMA/SMK Kelas 11-12)": {
+                "Spesialisasi MIPA / IPS / Kejuruan": { 
+                    "Aplikasi Tingkat Tinggi & Inovasi": "Peserta didik mampu mengintegrasikan konsep keahlian spesifik lintas disiplin untuk memecahkan kasus kompleks, mendesain model inovasi, dan melakukan adaptasi profesional/vokasional." 
+                }
+            }
+        };
+
+        // --- DATA OPSI OBSERVASI PMM ---
         const DATA_PMM_FULL = {
             "Disiplin Positif": {
                 "Fokus 1: Refleksi dinamika kelas": [
@@ -77,187 +218,92 @@
                 ]
             },
             "Keteraturan Suasana Kelas": {
-                "Fokus 1: Komunikasi positif": [
-                    "menggunakan komunikasi positif dalam mengelola kelas",
-                    "membangun suasana kelas yang aman dan nyaman",
-                    "menegur dengan cara yang mendidik"
-                ],
-                "Fokus 2: Strategi pengelompokan": [
-                    "mengelompokkan siswa secara terencana",
-                    "memastikan semua siswa terlibat dalam kegiatan",
-                    "memantau aktivitas kelompok"
-                ],
-                "Fokus 3: Kesepakatan kelas": [
-                    "mengingatkan aturan/kesepakatan kelas",
-                    "melibatkan siswa dalam penerapan aturan",
-                    "menegakkan aturan secara konsisten"
-                ]
+                "Fokus 1: Komunikasi positif": [ "menggunakan komunikasi positif dalam mengelola kelas", "membangun suasana kelas yang aman dan nyaman", "menegur dengan cara yang mendidik" ],
+                "Fokus 2: Strategi pengelompokan": [ "mengelompokkan siswa secara terencana", "memastikan semua siswa terlibat dalam kegiatan", "memantau aktivitas kelompok" ],
+                "Fokus 3: Kesepakatan kelas": [ "mengingatkan aturan/kesepakatan kelas", "melibatkan siswa dalam penerapan aturan", "menegakkan aturan secara konsisten" ]
             },
             "Umpan Balik Konstruktif": {
-                "Fokus 1: Umpan balik spesifik": [
-                    "memberi umpan balik spesifik pada hasil kerja siswa",
-                    "mengaitkan umpan balik dengan tujuan pembelajaran",
-                    "memberikan arahan perbaikan yang jelas"
-                ],
-                "Fokus 2: Fokus pada proses": [
-                    "mengapresiasi usaha siswa",
-                    "menilai proses belajar, bukan hanya hasil",
-                    "mendorong siswa terus mencoba"
-                ],
-                "Fokus 3: Diskusi umpan balik": [
-                    "mendiskusikan umpan balik dengan siswa",
-                    "memberi kesempatan siswa bertanya",
-                    "melibatkan siswa dalam refleksi belajar"
-                ]
+                "Fokus 1: Umpan balik spesifik": [ "memberi umpan balik spesifik pada hasil kerja siswa", "mengaitkan umpan balik dengan tujuan pembelajaran", "memberikan arahan perbaikan yang jelas" ],
+                "Fokus 2: Fokus pada proses": [ "mengapresiasi usaha siswa", "menilai proses belajar, bukan hanya hasil", "mendorong siswa terus mencoba" ],
+                "Fokus 3: Diskusi umpan balik": [ "mendiskusikan umpan balik dengan siswa", "memberi kesempatan siswa bertanya", "melibatkan siswa dalam refleksi belajar" ]
             },
             "Perhatian dan Kepedulian": {
-                "Fokus 1: Empati": [
-                    "mendengarkan perasaan dan kondisi siswa",
-                    "menunjukkan kepedulian terhadap siswa",
-                    "merespon dengan sikap yang bijak"
-                ],
-                "Fokus 2: Memahami kebutuhan siswa": [
-                    "mengenali karakteristik siswa",
-                    "menyesuaikan pendekatan pembelajaran",
-                    "memperhatikan perbedaan individu"
-                ],
-                "Fokus 3: Menghargai usaha": [
-                    "mengapresiasi usaha siswa",
-                    "memberikan motivasi belajar",
-                    "membangun kepercayaan diri siswa"
-                ]
+                "Fokus 1: Empati": [ "mendengarkan perasaan dan kondisi siswa", "menunjukkan kepedulian terhadap siswa", "merespon dengan sikap yang bijak" ],
+                "Fokus 2: Memahami kebutuhan siswa": [ "mengenali karakteristik siswa", "menyesuaikan pendekatan pembelajaran", "memperhatikan perbedaan individu" ],
+                "Fokus 3: Menghargai usaha": [ "mengapresiasi usaha siswa", "memberikan motivasi belajar", "membangun kepercayaan diri siswa" ]
             },
             "Ekspektasi pada Peserta Didik": {
-                "Fokus 1: Harapan tinggi": [
-                    "menyampaikan harapan tinggi kepada semua siswa",
-                    "mengenal potensi siswa",
-                    "memotivasi siswa untuk berkembang"
-                ],
-                "Fokus 2: Setara & adil": [
-                    "memberi kesempatan yang sama kepada semua siswa",
-                    "bersikap adil tanpa diskriminasi",
-                    "tidak membeda-bedakan siswa"
-                ],
-                "Fokus 3: Tantangan belajar": [
-                    "memberi tugas yang menantang",
-                    "mendorong pencapaian optimal siswa",
-                    "mendukung siswa mencapai target belajar"
-                ]
+                "Fokus 1: Harapan tinggi": [ "menyampaikan harapan tinggi kepada semua siswa", "mengenal potensi siswa", "memotivasi siswa untuk berkembang" ],
+                "Fokus 2: Setara & adil": [ "memberi kesempatan yang sama kepada semua siswa", "bersikap adil tanpa diskriminasi", "tidak membeda-bedakan siswa" ],
+                "Fokus 3: Tantangan belajar": [ "memberi tugas yang menantang", "mendorong pencapaian optimal siswa", "mendukung siswa mencapai target belajar" ]
             },
             "Aktivitas Interaktif": {
-                "Fokus 1: Keterlibatan siswa": [
-                    "melibatkan semua siswa dalam pembelajaran",
-                    "memberi kesempatan partisipasi merata",
-                    "memotivasi siswa aktif"
-                ],
-                "Fokus 2: Diskusi & kolaborasi": [
-                    "memfasilitasi diskusi kelompok",
-                    "mendorong kerja sama antar siswa",
-                    "memandu interaksi siswa"
-                ],
-                "Fokus 3: Pertanyaan pemantik": [
-                    "mengajukan pertanyaan berpikir kritis",
-                    "memberi waktu berpikir",
-                    "menindaklanjuti jawaban siswa"
-                ]
+                "Fokus 1: Keterlibatan siswa": [ "melibatkan semua siswa dalam pembelajaran", "memberi kesempatan partisipasi merata", "memotivasi siswa aktif" ],
+                "Fokus 2: Diskusi & kolaborasi": [ "memfasilitasi diskusi kelompok", "mendorong kerja sama antar siswa", "memandu interaksi siswa" ],
+                "Fokus 3: Pertanyaan pemantik": [ "mengajukan pertanyaan berpikir kritis", "memberi waktu berpikir", "menindaklanjuti jawaban siswa" ]
             },
             "Instruksi yang Adaptif": {
-                "Fokus 1: Responsif": [
-                    "mengecek pemahaman awal siswa",
-                    "menyesuaikan pembelajaran berdasarkan respon siswa",
-                    "merespon kesulitan siswa"
-                ],
-                "Fokus 2: Diferensiasi": [
-                    "memberikan variasi tugas",
-                    "menyesuaikan tingkat kesulitan",
-                    "memperhatikan kebutuhan individu"
-                ],
-                "Fokus 3: Refleksi": [
-                    "mengajak refleksi pembelajaran",
-                    "menggunakan hasil asesmen",
-                    "memperbaiki strategi pembelajaran"
-                ]
+                "Fokus 1: Responsif": [ "mengecek pemahaman awal siswa", "menyesuaikan pembelajaran berdasarkan respon siswa", "merespon kesulitan siswa" ],
+                "Fokus 2: Diferensiasi": [ "memberikan variasi tugas", "menyesuaikan tingkat kesulitan", "memperhatikan kebutuhan individu" ],
+                "Fokus 3: Refleksi": [ "mengajak refleksi pembelajaran", "menggunakan hasil asesmen", "memperbaiki strategi pembelajaran" ]
             },
             "Instruksi Pembelajaran": {
-                "Fokus 1: Penjelasan jelas": [
-                    "menjelaskan materi dengan bahasa sederhana",
-                    "menggunakan ilustrasi/visual",
-                    "menyesuaikan dengan pemahaman awal siswa"
-                ],
-                "Fokus 2: Kontekstual": [
-                    "memberi contoh nyata dalam kehidupan",
-                    "mengaitkan materi dengan pengalaman siswa",
-                    "melibatkan siswa dalam contoh"
-                ],
-                "Fokus 3: Terstruktur": [
-                    "menjelaskan secara runtut",
-                    "menghubungkan materi sebelumnya",
-                    "memberi langkah kerja yang jelas"
-                ]
+                "Fokus 1: Penjelasan jelas": [ "menjelaskan materi dengan bahasa sederhana", "menggunakan ilustrasi/visual", "menyesuaikan dengan pemahaman awal siswa" ],
+                "Fokus 2: Kontekstual": [ "memberi contoh nyata dalam kehidupan", "mengaitkan materi dengan pengalaman siswa", "melibatkan siswa dalam contoh" ],
+                "Fokus 3: Terstruktur": [ "menjelaskan secara runtut", "menghubungkan materi sebelumnya", "memberi langkah kerja yang jelas" ]
             }
         };
 
         const MODEL_PEMBELAJARAN = {
-            "Project-Based Learning (PjBL)": { memahami: "Aktivitas: Murid mengamati masalah kontekstual terkait topik dan mendiskusikan rencana proyek penyelesaiannya.", mengaplikasi: "Aktivitas: Murid secara kolaboratif merancang jadwal, membagi tugas, dan mulai membuat prototipe/karya nyata.", merefleksi: "Aktivitas: Murid mempresentasikan hasil karyanya, melakukan uji coba, dan menerima masukan dari kelompok lain.", sumatif: "Penilaian Produk/Proyek (Kriteria: Orisinalitas, Fungsi, Estetika)." },
-            "Problem-Based Learning (PBL)": { memahami: "Aktivitas: Murid disajikan sebuah anomali atau kasus nyata terkait topik dan merumuskan pertanyaan/masalah utamanya.", mengaplikasi: "Aktivitas: Murid melakukan investigasi, mengumpulkan data, dan mendiskusikan berbagai alternatif solusi.", merefleksi: "Aktivitas: Murid menyajikan solusi akhir yang disepakati dan mengevaluasi efektivitas solusi tersebut bersama guru.", sumatif: "Penilaian Unjuk Kerja & Laporan Analisis Pemecahan Masalah." },
-            "Inquiry Learning": { memahami: "Aktivitas: Guru mendemonstrasikan sebuah fenomena terkait topik. Murid merumuskan hipotesis sementara.", mengaplikasi: "Aktivitas: Murid merancang eksperimen sederhana, mengumpulkan bukti, dan mencatat data hasil pengamatan.", merefleksi: "Aktivitas: Murid menganalisis data untuk membuktikan hipotesis dan mengomunikasikan prinsip dasar yang ditemukan.", sumatif: "Laporan Praktikum/Eksperimen Sistematis." },
-            "Discovery Learning": { memahami: "Aktivitas: Murid mengeksplorasi berbagai contoh dan bukan-contoh dari topik yang diberikan oleh guru.", mengaplikasi: "Aktivitas: Murid membandingkan informasi, mengidentifikasi pola, dan membuktikan konsep melalui observasi terarah.", merefleksi: "Aktivitas: Murid melakukan generalisasi (menarik kesimpulan umum) tentang sifat dan aturan dari topik tersebut.", sumatif: "Tes Tertulis / Uraian Pemahaman Konsep." },
-            "Jigsaw": { memahami: `Aktivitas: Grup Ahli. Murid dibagi ke dalam kelompok dan setiap anggota menjadi "ahli" untuk satu sub-materi spesifik.`, mengaplikasi: `Aktivitas: Diskusi Silang. Kelompok ahli berdiskusi mendalam, lalu murid kembali ke kelompok asal untuk saling mengajarkan sub-materi ke temannya.`, merefleksi: `Aktivitas: Sintesis. Murid menyatukan semua kepingan informasi menjadi satu pemahaman utuh mengenai topik.`, sumatif: `Kuis Individu komprehensif tentang keseluruhan materi.` },
-            "STAD": { memahami: `Aktivitas: Guru menyajikan materi dasar tentang topik secara klasikal.`, mengaplikasi: `Aktivitas: Murid belajar dalam kelompok heterogen untuk memastikan semua anggota benar-benar memahami (tutor sebaya).`, merefleksi: `Aktivitas: Diadakan kuis individu yang nilainya disumbangkan untuk skor tim. Kelompok terbaik diberikan penghargaan.`, sumatif: `Kuis Individu dengan sistem skor kontribusi kelompok.` },
-            "TGT (Teams Games Tournament)": { memahami: `Aktivitas: Pengenalan konsep secara interaktif.`, mengaplikasi: `Aktivitas: Kelompok belajar bersama untuk mempersiapkan anggota tim menghadapi turnamen akademik terkait topik.`, merefleksi: `Aktivitas: Perwakilan kelompok berlomba menjawab soal-soal permainan akademik untuk mengumpulkan poin.`, sumatif: `Skor Turnamen Akademik antar kelompok.` },
-            "TPS (Think-Pair-Share)": { memahami: `Aktivitas: Think. Guru melempar pertanyaan kompleks tentang topik. Murid diberikan waktu memikirkan jawabannya secara mandiri.`, mengaplikasi: `Aktivitas: Pair. Murid berdiskusi dengan rekan sebangku (berpasangan) untuk menyatukan dan menyempurnakan jawaban.`, merefleksi: `Aktivitas: Share. Pasangan murid membagikan hasil pemikiran mereka ke seluruh kelas untuk ditanggapi.`, sumatif: `Penugasan Esai Pendek / Tanggapan Tertulis.` },
-            "NHT (Numbered Heads Together)": { memahami: `Aktivitas: Setiap murid dalam kelompok diberi nomor. Guru mengajukan persoalan tentang topik.`, mengaplikasi: `Aktivitas: Heads Together. Kelompok menyatukan kepala berdiskusi memastikan setiap nomor paham jawaban dari masalah.`, merefleksi: `Aktivitas: Guru memanggil satu nomor acak. Murid dengan nomor tersebut wajib menjawab mewakili kelompoknya.`, sumatif: `Penilaian Partisipasi dan Ketepatan Jawaban Acak.` },
-            "CTL (Contextual Teaching and Learning)": { memahami: `Aktivitas: Mengaitkan materi topik dengan pengalaman dan situasi dunia nyata yang dialami murid.`, mengaplikasi: `Aktivitas: Murid melakukan inkuiri dan bekerja sama memecahkan masalah keseharian terkait materi.`, merefleksi: `Aktivitas: Murid melakukan refleksi atas apa yang dipelajari dan memamerkan hasil kerjanya secara otentik.`, sumatif: `Penilaian Portofolio & Rubrik Otentik keseharian.` },
-            "RME (Realistic Mathematics/Science Education)": { memahami: `Aktivitas: Memulai pembelajaran dengan masalah/cerita kontekstual terkait topik yang bisa dibayangkan siswa.`, mengaplikasi: `Aktivitas: Murid mengubah masalah nyata tersebut ke dalam bahasa simbolik/rumus (matematisasi).`, merefleksi: `Aktivitas: Membandingkan dan mendiskusikan berbagai cara/strategi penyelesaian masalah yang ditemukan.`, sumatif: `Tes Pemecahan Masalah Realistis (Problem Solving).` },
-            "Flipped Classroom": { memahami: `Aktivitas: Review materi dasar topik yang telah dipelajari murid secara mandiri di rumah sebelumnya (via modul/video).`, mengaplikasi: `Aktivitas: Jam kelas difokuskan penuh untuk praktik, tugas kelompok, dan diskusi mendalam memecahkan tantangan.`, merefleksi: `Aktivitas: Guru memberikan umpan balik langsung atas kesulitan tingkat tinggi yang dihadapi murid saat praktik di kelas.`, sumatif: `Penilaian Praktik / Tugas Pendalaman di Kelas.` },
-            "Blended / Hybrid Learning": { memahami: `Aktivitas: Eksplorasi. Murid memaparkan hasil penelusuran materi topik yang telah dilakukan secara online.`, mengaplikasi: `Aktivitas: Kolaborasi Luring. Aktivitas tatap muka difokuskan untuk eksperimen/kolaborasi fisik yang tidak bisa dilakukan online.`, merefleksi: `Aktivitas: Menggabungkan pengalaman belajar online dan offline menjadi satu kesimpulan utuh.`, sumatif: `Kuis Online (LMS) Terintegrasi Proyek/Aktivitas Kelas.` },
-            "Game-Based Learning": { memahami: `Aktivitas: Pengenalan mekanika permainan/simulasi digital yang memuat tujuan pembelajaran tentang topik.`, mengaplikasi: `Aktivitas: Murid menyelesaikan misi atau tantangan di dalam lingkungan game yang merepresentasikan konsep.`, merefleksi: `Aktivitas: Debriefing. Diskusi menarik makna/konsep ilmiah dari pengalaman bermain game ke dunia nyata.`, sumatif: `Pencapaian Misi (Score/Badge) & Refleksi Tertulis.` },
-            "Self-Directed Learning": { memahami: `Aktivitas: Diagnosis. Murid mengidentifikasi secara mandiri apa yang belum ia kuasai mengenai topik.`, mengaplikasi: `Aktivitas: Strategi Mandiri. Murid merumuskan tujuan, memilih sumber belajar, dan mengeksekusi rencana belajarnya.`, merefleksi: `Aktivitas: Evaluasi Diri. Murid mengevaluasi hasil belajarnya sendiri dan menyusun rencana tindak lanjut.`, sumatif: `Jurnal Belajar Mandiri (Learning Log) & Kontrak Belajar.` },
-            "Direct Instruction": { memahami: `Aktivitas: Demonstrasi. Guru menyampaikan tujuan dan mendemonstrasikan secara langsung prosedur/langkah-langkah materi.`, mengaplikasi: `Aktivitas: Latihan Terbimbing. Murid meniru atau mempraktikkan keterampilan dasar dengan bimbingan dan koreksi guru.`, merefleksi: `Aktivitas: Latihan Mandiri. Murid melakukan praktik secara mandiri untuk memantapkan penguasaan prosedural.`, sumatif: `Tes Praktik / Keterampilan Prosedural.` },
-            "Mastery Learning": { memahami: `Aktivitas: Materi topik disajikan dalam unit-unit kecil yang sangat terstruktur.`, mengaplikasi: `Aktivitas: Murid berlatih. Yang belum tuntas diberikan remedial instan, yang sudah tuntas diberikan pengayaan.`, merefleksi: `Aktivitas: Memastikan seluruh murid mencapai standar ketuntasan minimal sebelum berpindah ke unit berikutnya.`, sumatif: `Tes Formatif/Sumatif Berulang hingga Mencapai Ketuntasan.` },
-            "TGfU (Teaching Games for Understanding)": { memahami: `Aktivitas: Murid diperkenalkan pada permainan taktis sederhana yang memuat elemen konsep.`, mengaplikasi: `Aktivitas: Murid memodifikasi atau membuat keputusan taktis secara langsung di lapangan terkait penyelesaian masalah.`, merefleksi: `Aktivitas: Mengidentifikasi keterampilan/teknik spesifik apa yang perlu diperbaiki untuk meningkatkan performa.`, sumatif: `Penilaian Kinerja Taktis (Tactical Performance).` }
+            "Problem-Based Learning (PBL)": { memahami: "Orientasi Masalah: Murid disajikan sebuah kasus nyata terkait topik. Murid merumuskan pertanyaan esensialnya.", mengaplikasi: "Investigasi: Murid melakukan penyelidikan kelompok, mengumpulkan data, dan mendiskusikan berbagai alternatif solusi nyata.", merefleksi: "Evaluasi: Murid menyajikan solusi akhir yang disepakati dan mengevaluasi efektivitas pemecahan masalah bersama guru.", sumatif: "Penilaian Unjuk Kerja & Laporan Analisis Pemecahan Masalah." },
+            "Project-Based Learning (PjBL)": { memahami: "Pertanyaan Mendasar: Murid mengamati masalah kontekstual terkait topik dan mendiskusikan rencana proyek penyelesaian nyata.", mengaplikasi: "Desain & Pelaksanaan: Murid secara kolaboratif merancang jadwal, membagi tugas, dan mulai membuat prototipe/karya nyata.", merefleksi: "Uji Hasil: Murid mempresentasikan hasil karya, melakukan uji coba produk, dan menerima masukan kelompok lain.", sumatif: "Penilaian Produk/Proyek Nyata (Kriteria: Orisinalitas, Fungsi, Estetika)." },
+            "Discovery Learning": { memahami: "Stimulasi: Murid mengeksplorasi berbagai contoh dan fenomena dari konsep topik materi yang disajikan oleh guru.", mengaplikasi: "Pengolahan Data: Murid membandingkan informasi, mengidentifikasi pola, dan membuktikan rumusan konsep melalui observasi terarah.", merefleksi: "Generalisasi: Murid menarik kesimpulan umum tentang sifat, rumus, atau aturan utama dari topik materi.", sumatif: "Tes Tertulis / Uraian Pemahaman Konsep Kompleks." },
+            "Inquiry Learning": { memahami: "Rumusan Masalah: Guru mendemonstrasikan sebuah fenomena terkait topik. Murid merumuskan hipotesis ilmiah sementara.", mengaplikasi: "Eksperimen: Murid merancang eksperimen sederhana, mengumpulkan bukti fisik, dan mencatat data hasil pengamatan kelompok.", merefleksi: "Pembuktian: Murid menganalisis data untuk membuktikan kebenaran hipotesis dan mengomunikasikan temuan ilmiahnya.", sumatif: "Laporan Praktikum / Eksperimen Sistematis." },
+            "Jigsaw": { memahami: `Grup Ahli: Murid dibagi ke dalam kelompok dan setiap anggota menjadi "ahli" untuk satu sub-materi spesifik.`, mengaplikasi: `Diskusi Silang: Kelompok ahli berdiskusi mendalam, lalu murid kembali ke kelompok asal untuk saling mengajarkan sub-materi ke temannya.`, merefleksi: `Sintesis: Murid menyatukan semua kepingan informasi menjadi satu pemahaman utuh mengenai topik.`, sumatif: `Kuis Individu komprehensif tentang keseluruhan materi.` },
+            "STAD": { memahami: `Penyajian: Guru menyajikan materi dasar tentang topik secara klasikal.`, mengaplikasi: `Kerja Tim: Murid belajar dalam kelompok heterogen untuk memastikan semua anggota benar-benar memahami (tutor sebaya).`, merefleksi: `Rekognisi: Diadakan kuis individu yang nilainya disumbangkan untuk skor tim. Kelompok terbaik diberikan penghargaan.`, sumatif: `Kuis Individu dengan sistem skor kontribusi kelompok.` },
+            "TGT (Teams Games Tournament)": { memahami: `Orientasi: Pengenalan konsep secara interaktif.`, mengaplikasi: `Persiapan Turnamen: Kelompok belajar bersama untuk mempersiapkan anggota tim menghadapi turnamen akademik terkait topik.`, merefleksi: `Turnamen: Perwakilan kelompok berlomba menjawab soal-soal permainan akademik untuk mengumpulkan poin.`, sumatif: `Skor Turnamen Akademik antar kelompok.` },
+            "TPS (Think-Pair-Share)": { memahami: `Think: Guru melempar pertanyaan kompleks tentang topik. Murid diberikan waktu memikirkan jawabannya secara mandiri.`, mengaplikasi: `Pair: Murid berdiskusi dengan rekan sebangku (berpasangan) untuk menyatukan dan menyempurnakan jawaban.`, merefleksi: `Share: Pasangan murid membagikan hasil pemikiran mereka ke seluruh kelas untuk ditanggapi.`, sumatif: `Penugasan Esai Pendek / Tanggapan Tertulis.` },
+            "NHT (Numbered Heads Together)": { memahami: `Penomoran: Setiap murid dalam kelompok diberi nomor. Guru mengajukan persoalan tentang topik.`, mengaplikasi: `Heads Together: Kelompok menyatukan kepala berdiskusi memastikan setiap nomor paham jawaban dari masalah.`, merefleksi: `Pemanggilan: Guru memanggil satu nomor acak. Murid dengan nomor tersebut wajib menjawab mewakili kelompoknya.`, sumatif: `Penilaian Partisipasi dan Ketepatan Jawaban Acak.` },
+            "CTL (Contextual Teaching and Learning)": { memahami: `Constructivism: Mengaitkan materi topik dengan pengalaman dan situasi dunia nyata yang dialami murid.`, mengaplikasi: `Learning Community: Murid melakukan inkuiri dan bekerja sama memecahkan masalah keseharian terkait materi.`, merefleksi: `Authentic Assessment: Murid melakukan refleksi atas apa yang dipelajari dan memamerkan hasil kerjanya secara otentik.`, sumatif: `Penilaian Portofolio & Rubrik Otentik keseharian.` },
+            "RME (Realistic Mathematics/Science Education)": { memahami: `Masalah Realistis: Memulai pembelajaran dengan masalah/cerita kontekstual terkait topik yang bisa dibayangkan siswa.`, mengaplikasi: `Matematisasi: Murid mengubah masalah nyata tersebut ke dalam bahasa simbolik/rumus (matematisasi).`, merefleksi: `Interaktivitas: Membandingkan dan mendiskusikan berbagai cara/strategi penyelesaian masalah yang ditemukan.`, sumatif: `Tes Pemecahan Masalah Realistis (Problem Solving).` },
+            "Flipped Classroom": { memahami: `Pra-Kelas: Review materi dasar topik yang telah dipelajari murid secara mandiri di rumah sebelumnya (via modul/video).`, mengaplikasi: `Aktivitas Kelas: Jam kelas difokuskan penuh untuk praktik, tugas kelompok, dan diskusi mendalam memecahkan tantangan.`, merefleksi: `Penguatan: Guru memberikan umpan balik langsung atas kesulitan tingkat tinggi yang dihadapi murid saat praktik di kelas.`, sumatif: `Penilaian Praktik / Tugas Pendalaman di Kelas.` },
+            "Blended / Hybrid Learning": { memahami: `Eksplorasi Daring: Murid memaparkan hasil penelusuran materi topik yang telah dilakukan secara online.`, mengaplikasi: `Kolaborasi Luring: Aktivitas tatap muka difokuskan untuk eksperimen/kolaborasi fisik yang tidak bisa dilakukan online.`, merefleksi: `Sinkronisasi: Menggabungkan pengalaman belajar online dan offline menjadi satu kesimpulan utuh.`, sumatif: `Kuis Online (LMS) Terintegrasi Proyek/Aktivitas Kelas.` },
+            "Game-Based Learning": { memahami: `Aturan Main: Pengenalan mekanika permainan/simulasi digital yang memuat tujuan pembelajaran tentang topik.`, mengaplikasi: `Bermain/Simulasi: Murid menyelesaikan misi atau tantangan di dalam lingkungan game yang merepresentasikan konsep.`, merefleksi: `Debriefing: Diskusi menarik makna/konsep ilmiah dari pengalaman bermain game ke dunia nyata.`, sumatif: `Pencapaian Misi (Score/Badge) & Refleksi Tertulis.` },
+            "Self-Directed Learning": { memahami: `Diagnosis: Murid mengidentifikasi secara mandiri apa yang belum ia kuasai mengenai topik.`, mengaplikasi: `Strategi Mandiri: Murid merumuskan tujuan, memilih sumber belajar, dan mengeksekusi rencana belajarnya.`, merefleksi: `Evaluasi Diri: Murid mengevaluasi hasil belajarnya sendiri dan menyusun rencana tindak lanjut.`, sumatif: `Jurnal Belajar Mandiri (Learning Log) & Kontrak Belajar.` },
+            "Direct Instruction": { memahami: `Demonstrasi: Guru menyampaikan tujuan dan mendemonstrasikan secara langsung prosedur/langkah-langkah materi.`, mengaplikasi: `Latihan Terbimbing: Murid meniru atau mempraktikkan keterampilan dasar dengan bimbingan dan koreksi guru.`, merefleksi: `Latihan Mandiri: Murid melakukan praktik secara mandiri untuk memantapkan penguasaan prosedural.`, sumatif: `Tes Praktik / Keterampilan Prosedural.` },
+            "Mastery Learning": { memahami: `Penyajian Blok: Materi topik disajikan dalam unit-unit kecil yang sangat terstruktur.`, mengaplikasi: `Latihan & Remedial: Murid berlatih. Yang belum tuntas diberikan remedial instan, yang sudah tuntas diberikan pengayaan.`, merefleksi: `Ketuntasan: Memastikan seluruh murid mencapai standar ketuntasan minimal sebelum berpindah ke unit berikutnya.`, sumatif: `Tes Formatif/Sumatif Berulang hingga Mencapai Ketuntasan.` },
+            "TGfU (Teaching Games for Understanding)": { memahami: `Apresiasi Game: Murid diperkenalkan pada permainan taktis sederhana yang memuat elemen konsep.`, mengaplikasi: `Kesadaran Taktis: Murid memodifikasi atau membuat keputusan taktis secara langsung di lapangan terkait penyelesaian masalah.`, merefleksi: `Eksekusi Keterampilan: Mengidentifikasi keterampilan/teknik spesifik apa yang perlu diperbaiki untuk meningkatkan performa.`, sumatif: `Penilaian Kinerja Taktis (Tactical Performance).` }
         };
 
         const getModelData = (metode) => MODEL_PEMBELAJARAN[metode] || MODEL_PEMBELAJARAN["Problem-Based Learning (PBL)"];
 
-        // Aspek Formatif Siswa (Disesuaikan secara psikologis dengan Indikator PMM Guru)
         const ASPEK_MURID_MAP = {
-            "Disiplin Positif": "1. Tanggung jawab terhadap konsekuensi tindakan dalam kelompok.\n2. Kemampuan refleksi diri dan pengendalian emosi saat menghadapi kesulitan.",
-            "Keteraturan Suasana Kelas": "1. Kepatuhan pada kesepakatan kelas dan aturan main.\n2. Kolaborasi dan interaksi positif sesama anggota kelompok.",
-            "Umpan Balik Konstruktif": "1. Keterbukaan menerima masukan atau kritik dari teman/guru.\n2. Kemampuan memberikan umpan balik (peer-review) yang objektif ke teman.",
-            "Perhatian dan Kepedulian": "1. Sikap empati dan kepedulian terhadap teman yang kesulitan.\n2. Respons positif dan toleransi terhadap perbedaan karakteristik rekan.",
-            "Ekspektasi pada Peserta Didik": "1. Kegigihan (Grit) dan pantang menyerah dalam menyelesaikan tantangan tugas.\n2. Kepercayaan diri dalam menunjukkan potensi dan mempresentasikan hasil.",
-            "Aktivitas Interaktif": "1. Tingkat partisipasi dan inisiatif dalam mengemukakan pendapat.\n2. Kualitas argumen dan keterlibatan diskusi dua arah dengan teman.",
-            "Instruksi yang Adaptif": "1. Respon adaptif terhadap variasi tugas (diferensiasi) yang diberikan.\n2. Kemampuan merefleksikan proses belajar dan capaiannya sendiri.",
-            "Instruksi Pembelajaran": "1. Pemahaman mendetail terhadap instruksi dan langkah kerja materi.\n2. Kemampuan mengaitkan teori materi dengan konteks keseharian/nyata."
+            "Disiplin Positif": "1. Tanggung jawab terhadap konsekuensi tindakan.\n2. Kemampuan refleksi diri dan kontrol emosi.",
+            "Keteraturan Suasana Kelas": "1. Kepatuhan pada kesepakatan belajar kelas.\n2. Tingkat partisipasi aktif kolaboratif kelompok.",
+            "Umpan Balik Konstruktif": "1. Keterbukaan menerima masukan perbaikan dari teman/guru.\n2. Kemampuan memberikan feedback objektif.",
+            "Perhatian dan Kepedulian": "1. Sikap empati membantu rekan yang kesulitan.\n2. Rasa percaya diri dalam memaparkan opini.",
+            "Ekspektasi pada Peserta Didik": "1. Kegigihan (Grit) menyelesaikan tugas menantang.\n2. Kemandirian pengerjaan target indikator.",
+            "Aktivitas Interaktif": "1. Keaktifan berpendapat dalam forum diskusi.\n2. Menghargai perbedaan argumen rekan.",
+            "Instruksi yang Adaptif": "1. Respon terhadap variasi tingkat kesulitan tugas.\n2. Kedisiplinan melakukan evaluasi berkala.",
+            "Instruksi Pembelajaran": "1. Pemahaman runtut alur prosedural instruksi.\n2. Ketepatan aplikasi contoh kontekstual materi."
         };
 
         // --- SMART ENGINE LOGIC ---
         const SmartEngine = {
-            getLingkupMateri: (topik, mapel, metode) => {
+            getLingkupMateri: (topik, mapel, metode, elemen) => {
                 const t = topik || "[Topik]";
+                const el = elemen || "[Elemen]";
                 const m = (mapel || "").toLowerCase();
-                if (m.includes("bahasa") || m.includes("sastra") || m.includes("english") || m.includes("inggris")) return `Analisis Struktur, Kebahasaan, dan Pemecahan Masalah pada Materi ${t}`;
+                const isBahasa = m.includes("bahasa") || m.includes("sastra") || m.includes("english") || m.includes("inggris");
                 
-                const kooperatif = ["Jigsaw", "STAD", "TGT (Teams Games Tournament)", "TPS (Think-Pair-Share)", "NHT (Numbered Heads Together)"];
-                const kontekstual = ["CTL (Contextual Teaching and Learning)", "RME (Realistic Mathematics/Science Education)"];
-                const teknologi = ["Flipped Classroom", "Blended / Hybrid Learning", "Game-Based Learning", "Self-Directed Learning"];
-                const instruksional = ["Direct Instruction", "Mastery Learning", "TGfU (Teaching Games for Understanding)"];
-
-                if (metode === "Project-Based Learning (PjBL)") return `Perancangan Proyek dan Penerapan Praktis Konsep ${t}`;
-                if (metode === "Problem-Based Learning (PBL)") return `Analisis Kasus dan Pemecahan Masalah Kontekstual pada ${t}`;
-                if (metode === "Discovery Learning" || metode === "Inquiry Learning") return `Penyelidikan Ilmiah, Penemuan Pola, dan Eksplorasi Logika pada ${t}`;
-                if (kooperatif.includes(metode)) return `Kajian Kolaboratif dan Diskusi Mendalam mengenai Konsep ${t}`;
-                if (kontekstual.includes(metode)) return `Kajian Kontekstual dan Penerapan Nyata pada Materi ${t}`;
-                if (teknologi.includes(metode)) return `Eksplorasi Digital dan Analisis Interaktif pada Materi ${t}`;
-                if (instruksional.includes(metode)) return `Penguasaan Keterampilan Dasar dan Praktik Prosedural terkait ${t}`;
-                return `Eksplorasi Konsep dan Aplikasi Praktis ${t}`;
+                if (isBahasa) return `Kajian Elemen ${el}: Struktur, Kebahasaan, dan Refleksi Kontekstual pada Materi ${t}`;
+                return `Eksplorasi Kompetensi Elemen ${el}: Penerapan Praktis dan Pendalaman Teoretis ${t} Berbasis Pendekatan ${metode}`;
             },
 
             getKesiapan: (topik, mapel) => ({
-                konsep: `Sebagian besar siswa mungkin sudah pernah berinteraksi dengan fenomena/konsep "${topik}" dalam kehidupan sehari-hari, namun pemahaman logis terkait mata pelajaran ${mapel} masih perlu pendalaman.`,
-                teknis: `Siswa membutuhkan panduan guru untuk menyusun kerangka berpikir atau menggunakan instrumen khusus terkait ${topik}.`,
-                mental: `Membangun iklim kelas yang inklusif agar siswa tidak ragu berpendapat atau bereksperimen membedah masalah ${topik}.`
+                konsep: `Sebagian besar siswa sudah berinteraksi dengan fenomena materi "${topik || '[Topik]'}" secara parsial di keseharian, namun pemahaman mendalam secara akademis pada rumpun mapel ${mapel || '[Mapel]'} memerlukan jembatan konsep yang terstruktur.`,
+                teknis: `Siswa membutuhkan orientasi prosedural untuk menggunakan instrumen berpikir atau piranti teknis guna mengolah data terkait ${topik || '[Topik]'}.`,
+                mental: `Menciptakan zona belajar bebas perundungan agar siswa memiliki ketahanan mental untuk bereksplorasi tanpa rasa takut salah.`
             }),
 
             generatePengalamanBelajar: (topik, mapel, metode, indikator, fokusPMM) => {
@@ -285,7 +331,7 @@
                 const buildMulti = (arr) => {
                     if (!arr || arr.length === 0) return "";
                     if (arr.length === 1) return `**Guru ${arr[0]}**`;
-                    return `**Guru ${arr[0]}**, **${arr[1]}**, serta **${arr[2]}**`;
+                    return `**Guru ${arr[0]}**, **${arr[1]}**, serta proaktif **${arr[2]}**`;
                 };
 
                 let inti1_pmm = "";
@@ -293,28 +339,28 @@
                 let inti3_pmm = "";
 
                 if (fokusPMM === "Semua Fokus") {
-                    inti1_pmm = `- Sebagai langkah awal eksplorasi, **guru ${actsInti[0]}**.`;
-                    inti2_pmm = `- Selama proses kolaborasi, **guru ${actsInti[1]}**.`;
-                    inti3_pmm = `- Dalam mengawal interaksi kelompok, **guru ${actsInti[2]}**.`;
+                    inti1_pmm = `- Di awal fase pemecahan, **guru secara asertif ${actsInti[0]}**.`;
+                    inti2_pmm = `- Saat murid mengaplikasikan instruksi, **guru berkeliling guna ${actsInti[1]}**.`;
+                    inti3_pmm = `- Pada sesi penarikan makna, **guru memandu jalannya kelas serta ${actsInti[2]}**.`;
                 } else {
-                    inti2_pmm = `- Sebagai fasilitator aktif, **guru ${actsInti[0]}**.`;
+                    inti2_pmm = `- Sebagai aksi nyata observasi PMM, **guru senantika proaktif ${actsInti[0]}**.`;
                 }
 
                 return {
-                    awal: `- Guru mengucapkan salam, mengecek kehadiran, dan memimpin doa kelas.\n- Dalam proses persiapan dan orientasi, ${buildMulti(actsAwal)}.\n- Guru mengajukan pertanyaan apersepsi yang mengaitkan fenomena ${topik || "[Topik]"} dengan konsep ${mapel || "[Mapel]"} sebelumnya.\n- Guru menyampaikan tujuan pembelajaran.`,
-                    inti1: `${mod.memahami}\n\n${inti1_pmm ? inti1_pmm : "- Guru mendampingi proses pemahaman awal murid secara cermat."}`,
+                    awal: `- Guru membuka kelas dengan salam hangat, mengecek presensi, dan memimpin doa bersama.\n- Kondisi Pijakan Awal: Dalam mengondisikan kesiapan belajar siswa, ${buildMulti(actsAwal)}.\n- Guru melempar pertanyaan pemantik kontekstual mengenai ${topik || "[Topik]"} dalam ruang lingkup ${mapel || "[Mapel]"}.\n- Menyampaikan target capaian pembelajaran hari ini.`,
+                    inti1: `${mod.memahami}\n\n${inti1_pmm ? inti1_pmm : "- Guru memandu jalannya orientasi konsep secara runtul dan joyful."}`,
                     inti2: `${mod.mengaplikasi}\n\n${inti2_pmm}`,
-                    inti3: `${mod.merefleksi}\n\n${inti3_pmm ? inti3_pmm : "- Guru memfasilitasi pelurusan miskonsepsi (jika ada) terkait materi."}`,
-                    penutup: `- Guru bersama murid menyimpulkan esensi pembelajaran tentang ${topik || "[Topik]"}.\n- Pada tahap resolusi dan evaluasi, ${buildMulti(actsAkhir)}.\n- Guru menutup kegiatan dengan doa dan pesan motivasi.`
+                    inti3: `${mod.merefleksi}\n\n${inti3_pmm ? inti3_pmm : "- Guru memfasilitasi konfirmasi materi guna meluruskan miskonsepsi siswa."}`,
+                    penutup: `- Guru bersama peserta didik merangkum kesimpulan esensial dari aktivitas ${topik || "[Topik]"}.\n- Kondisi Resolusi Akhir: Saat melakukan evaluasi dan refleksi penutup kelas, ${buildMulti(actsAkhir)}.\n- Berdoa bersama dan menutup kelas dengan salam.`
                 };
             },
 
             generateRekomendasiAsesmen: (topik, metode, indikator, fokusPMM) => {
                 const mod = getModelData(metode);
-                const infoFokus = fokusPMM === "Semua Fokus" ? "semua target perilaku" : "fokus perilaku spesifik";
+                const infoFokus = fokusPMM === "Semua Fokus" ? "seluruh ragam target perilaku" : "fokus aksi klinis";
                 return {
-                    awal: `Diagnostik Non-Kognitif & Kognitif: Memetakan kesiapan dan wawasan dasar murid tentang ${topik || "[Topik]"}.`,
-                    formatif: `Observasi Formatif: Memantau perkembangan sikap/karakter murid yang relevan dengan Indikator ${indikator} (${infoFokus}) selama sintaks kegiatan.`,
+                    awal: `Diagnostik Kognitif awal: Mengukur pemahaman prasyarat siswa tentang ${topik || "[Topik]"}.`,
+                    formatif: `Lembar Observasi Sikap: Menilai dinamika perkembangan karakter siswa yang sinkron dengan rubrik PMM ${indikator} (${infoFokus}).`,
                     sumatif: mod.sumatif
                 }
             },
@@ -324,22 +370,21 @@
                 const m = mapel || "[Mapel]";
                 const mod = getModelData(metode);
 
-                const soalAwal = `PERTANYAAN DIAGNOSTIK:\n1. Apa yang terlintas di pikiranmu jika mendengar istilah "${t}" dalam pelajaran ${m}?\n2. Mengapa menurutmu materi "${t}" ini relevan/penting bagi kehidupan kita?`;
+                const soalAwal = `PERTANYAAN DIAGNOSTIK:\n1. Tuliskan apa yang kamu pahami tentang materi "${t}" pada pelajaran ${m}?\n2. Berikan contoh nyata relevansi "${t}" dalam kehidupan sehari-hari!`;
+                const legend = "Baru Memulai: Pasif, indikator belum terlihat, membutuhkan intervensi konstan.\nBerkembang: Mulai konsisten memunculkan perilaku namun belum stabil.\nCakap: Secara mandiri memunculkan perilaku baku secara ajeg.\nMahir: Proaktif, memberikan dampak positif bagi ritme kerja kelompok.";
                 
-                const legend = "Baru Memulai: Masih pasif dan membutuhkan bimbingan penuh dari guru.\nBerkembang: Mulai menunjukkan kemampuan, namun sesekali masih perlu diingatkan.\nCakap: Mampu menunjukkan indikator secara mandiri dan konsisten.\nMahir: Sangat proaktif, melampaui ekspektasi, dan mampu memotivasi rekan sebayanya.";
-                
-                let soalSumatif = `TAGIHAN SUMATIF (${metode}):\n${mod.sumatif}\n\nINSTRUKSI KEPADA MURID:\nBuatlah atau selesaikan tantangan terkait "${t}" sesuai dengan prosedur yang telah disepakati di kelompok Anda. Perhatikan kriteria penilaian yang akan dievaluasi!`;
-                if (metode === "Project-Based Learning (PjBL)") soalSumatif = `TUGAS PROYEK:\nBuatlah sebuah produk/karya nyata yang berkaitan dengan "${t}".\n\nKriteria Penilaian (Bobot):\n1. Perencanaan Ide (20%)\n2. Proses Pembuatan & Kolaborasi (30%)\n3. Fungsionalitas & Estetika Produk (30%)\n4. Presentasi (20%)`;
-                else if (metode === "Problem-Based Learning (PBL)") soalSumatif = `STUDI KASUS:\nAnalisislah sebuah permasalahan nyata terkait "${t}" dan formulasikan solusinya!\n\nKriteria Penilaian:\n1. Kedalaman Analisis Masalah (30%)\n2. Kelogisan Solusi (40%)\n3. Kerjasama Kelompok (30%)`;
-                else if (metode === "Inquiry Learning") soalSumatif = `LAPORAN EKSPERIMEN:\nSusunlah laporan dari percobaan tentang "${t}".\n\nKriteria Penilaian:\n1. Rumusan Hipotesis (20%)\n2. Keakuratan Data (30%)\n3. Analisis & Kesimpulan (50%)`;
-                
+                let soalSumatif = `TAGIHAN SUMATIF MATERI (${metode}):\n${mod.sumatif}\n\nPETUNJUK KERJA:\nSelesaikan penugasan komprehensif materi "${t}" ini secara bertanggung jawab bersama mitra kelompok Anda berdasarkan rubrik penilaian unjuk kerja terpilih!`;
+                if (metode === "Project-Based Learning (PjBL)") soalSumatif = `TUGAS PROYEK MAJU:\nBuatlah purwarupa/karya nyata aplikatif terkait konsep "${t}".\n\nRubrik Penilaian:\n1. Orisinalitas & Desain Ide (20%)\n2. Proses Manufaktur & Gotong Royong (30%)\n3. Fungsionalitas Mekanik Produk (30%)\n4. Presentasi (20%)`;
+                else if (metode === "Problem-Based Learning (PBL)") soalSumatif = `STUDI KASUS NYATA:\nLakukan bedah analisis mendalam pada problem rikel terkait "${t}" dan formulasikan draf solusinya!\n\nRubrik Penilaian:\n1. Kedalaman Identifikasi Akar Masalah (30%)\n2. Kelogisan & Relevansi Solusi (40%)\n3. Struktur Argumen Kelompok (30%)`;
+                else if (metode === "Inquiry Learning") soalSumatif = `LAPORAN PENYELIDIKAN:\nSusunlah artikel laporan ilmiah terstruktur dari percobaan mandiri materi "${t}".\n\nRubrik Penilaian:\n1. Konstruksi Hipotesis (20%)\n2. Validitas Instrumen Data (30%)\n3. Ketajaman Analisis Kesimpulan (50%)`;
+
                 return { instAwal: soalAwal, formAspek: ASPEK_MURID_MAP[indikator], formLegend: legend, instSumatif: soalSumatif };
             },
 
             generateTroubleshooting: (topik) => [
-                { masalah: `Pemahaman konsep dasar ${topik} masih abstrak`, penyebab: "Kurangnya visualisasi atau contoh kontekstual.", solusi: "Berikan analogi sederhana atau media visual." },
-                { masalah: `Siswa kesulitan menyelesaikan tantangan/tugas ${topik}`, penyebab: "Ketidaktepatan instruksi/kurang literasi materi.", solusi: "Lakukan scaffolding: pandu langkah demi langkah." },
-                { masalah: "Dinamika kolaborasi kelompok tidak berjalan baik", penyebab: "Dominasi satu siswa atau ada yang pasif.", solusi: "Distribusikan peran yang jelas (Notulis, Presenter, dsb)." }
+                { masalah: `Abstraksi konsep ${topik} sulit dicerna`, penyebab: "Minimnya jembatan media visual konkret.", solusi: "Gunakan visualisasi analogi atau simulator peraga." },
+                { masalah: `Siswa menemui jalan buntu saat pengerjaan tugas ${topik}`, penyebab: "Instruksi terlalu makro / defisit literasi awal.", solusi: "Terapkan scaffolding: urai tugas menjadi sub-bagian kecil." },
+                { masalah: "Dinamika internal kelompok macet", penyebab: "Sentralisasi peran atau ada anggota yang pasif.", solusi: "Tegaskan pembagian jobdesk spesifik (Notulis, Ketua, Presenter)." }
             ]
         };
 
@@ -381,43 +426,66 @@
             const [step, setStep] = useState(1);
             const [isGenerated, setIsGenerated] = useState(false);
             
+            // Cascading Cascader States
+            const [selectedFase, setSelectedFase] = useState("Fase D (SMP/MTs Grade 7-9)");
+            const [selectedMapel, setSelectedMapel] = useState("Ilmu Pengetahuan Alam (IPA)");
+            const [selectedElemen, setSelectedElemen] = useState("Pemahaman IPA");
+
             const [formData, setFormData] = useState({
-                guru: "", kepalaSekolah: "", nipKepalaSekolah: "", sekolah: "SMPN 2 Karangtengah", mapel: "", kelas: "VIII / Genap", waktu: "3 JP",
+                guru: "", kepalaSekolah: "", nipKepalaSekolah: "", sekolah: "SMPN 2 Karangtengah", mapel: "Ilmu Pengetahuan Alam (IPA)", kelas: "VIII / Genap", waktu: "3 JP",
                 topik: "", lingkupMateri: "", dpl: ["Bernalar Kritis", "Bergotong Royong"],
                 kesiapanKonsep: "", kesiapanTeknis: "", kesiapanMental: "", karakteristikMateri: "",
                 indikator: "Disiplin Positif", fokusPMM: "Semua Fokus", metode: "Problem-Based Learning (PBL)", kemitraan: "Rekan Sejawat",
-                tujuanPembelajaran: "",
+                tujuanPembelajaran: "", capaianPembelajaran: "",
                 kegiatanAwal: "", kegiatanInti1: "", kegiatanInti2: "", kegiatanInti3: "", kegiatanPenutup: "",
                 asesmenAwal: "", asesmenFormatif: "", asesmenSumatif: "", troubleshooting: [],
                 instrumenAwal: "", instrumenFormatifAspek: "", instrumenFormatifLegend: "", instrumenSumatif: ""
             });
 
-            // Chain Effect Utama
+            // Sinkronisasi Perubahan Cascading Dropdown ke State Form Utama
+            const handleFaseChange = (e) => {
+                const fase = e.target.value;
+                setSelectedFase(fase);
+                const mapels = Object.keys(DATABASE_KURIKULUM[fase]);
+                setSelectedMapel(mapels[0]);
+                const elemens = Object.keys(DATABASE_KURIKULUM[fase][mapels[0]]);
+                setSelectedElemen(elemens[0]);
+            };
+
+            const handleMapelDropdownChange = (e) => {
+                const mapel = e.target.value;
+                setSelectedMapel(mapel);
+                const elemens = Object.keys(DATABASE_KURIKULUM[selectedFase][mapel]);
+                setSelectedElemen(elemens[0]);
+            };
+
+            // Smart Engine Reactive Weaver
             useEffect(() => {
-                if (formData.topik && formData.topik.length > 2) {
-                    const lingkupDinamis = SmartEngine.getLingkupMateri(formData.topik, formData.mapel, formData.metode);
-                    const kesiapan = SmartEngine.getKesiapan(formData.topik, formData.mapel);
-                    const experience = SmartEngine.generatePengalamanBelajar(formData.topik, formData.mapel, formData.metode, formData.indikator, formData.fokusPMM);
-                    const asesmen = SmartEngine.generateRekomendasiAsesmen(formData.topik, formData.metode, formData.indikator, formData.fokusPMM);
-                    const instrumen = SmartEngine.generateInstrumenAsesmen(formData.topik, formData.mapel, formData.metode, formData.indikator);
-                    const trouble = SmartEngine.generateTroubleshooting(formData.topik);
-                    
-                    setFormData(prev => ({
-                        ...prev,
-                        lingkupMateri: lingkupDinamis,
-                        karakteristikMateri: `Materi ${formData.topik} pada pelajaran ${formData.mapel || 'ini'} bersifat kontekstual dan menuntut daya nalar/analisis aplikasi di dunia nyata.`,
-                        kesiapanKonsep: kesiapan.konsep, kesiapanTeknis: kesiapan.teknis, kesiapanMental: kesiapan.mental,
-                        tujuanPembelajaran: `Melalui pendekatan ${formData.metode}, peserta didik mampu menganalisis konsep ${formData.topik} dan menyelesaikan tantangan/masalah terkait dengan tepat ${prev.dpl.length > 0 ? 'serta menunjukkan sikap ' + prev.dpl.join(', ') : ''}.`,
-                        kegiatanAwal: experience.awal, kegiatanInti1: experience.inti1, kegiatanInti2: experience.inti2, kegiatanInti3: experience.inti3, kegiatanPenutup: experience.penutup,
-                        asesmenAwal: asesmen.awal, asesmenFormatif: asesmen.formatif, asesmenSumatif: asesmen.sumatif,
-                        troubleshooting: trouble,
-                        instrumenAwal: instrumen.instAwal,
-                        instrumenFormatifAspek: instrumen.formAspek,
-                        instrumenFormatifLegend: instrumen.formLegend,
-                        instrumenSumatif: instrumen.instSumatif
-                    }));
-                }
-            }, [formData.topik, formData.mapel, formData.metode, formData.indikator, formData.fokusPMM, formData.dpl]);
+                const cp = DATABASE_KURIKULUM[selectedFase]?.[selectedMapel]?.[selectedElemen] || "";
+                const lingkupDinamis = SmartEngine.getLingkupMateri(formData.topik, selectedMapel, formData.metode, selectedElemen);
+                const kesiapan = SmartEngine.getKesiapan(formData.topik, selectedMapel);
+                const experience = SmartEngine.generatePengalamanBelajar(formData.topik, selectedMapel, formData.metode, formData.indikator, formData.fokusPMM);
+                const asesmen = SmartEngine.generateRekomendasiAsesmen(formData.topik, formData.metode, formData.indikator, formData.fokusPMM);
+                const instrumen = SmartEngine.generateInstrumenAsesmen(formData.topik, selectedMapel, formData.metode, formData.indikator);
+                const trouble = SmartEngine.generateTroubleshooting(formData.topik);
+
+                setFormData(prev => ({
+                    ...prev,
+                    mapel: selectedMapel,
+                    capaianPembelajaran: cp,
+                    lingkupMateri: lingkupDinamis,
+                    karakteristikMateri: `Materi ${formData.topik || '[Topik]'} pada rumpun elemen ${selectedElemen} mapel ${selectedMapel} mengedepankan penalaran kontekstual serta pemecahan problem otentik.`,
+                    kesiapanKonsep: kesiapan.konsep, kesiapanTeknis: kesiapan.teknis, kesiapanMental: kesiapan.mental,
+                    tujuanPembelajaran: `Melalui sintaks ${formData.metode} pada kriteria elemen ${selectedElemen}, peserta didik mampu menganalisis esensi dasar ${formData.topik || '[Topik]'} serta menuntaskan target penugasan secara berkelompok ${prev.dpl.length > 0 ? 'sambil menumbuhkan karakter ' + prev.dpl.join(', ') : ''}.`,
+                    kegiatanAwal: experience.awal, kegiatanInti1: experience.inti1, kegiatanInti2: experience.inti2, kegiatanInti3: experience.inti3, kegiatanPenutup: experience.penutup,
+                    asesmenAwal: asesmen.awal, asesmenFormatif: asesmen.formatif, asesmenSumatif: asesmen.sumatif,
+                    troubleshooting: trouble,
+                    instrumenAwal: instrumen.instAwal,
+                    instrumenFormatifAspek: instrumen.formAspek,
+                    instrumenFormatifLegend: instrumen.formLegend,
+                    instrumenSumatif: instrumen.instSumatif
+                }));
+            }, [selectedFase, selectedMapel, selectedElemen, formData.topik, formData.metode, formData.indikator, formData.fokusPMM, formData.dpl]);
 
             const handleInputChange = (e) => {
                 const { name, value } = e.target;
@@ -432,7 +500,6 @@
 
             useEffect(() => { lucide.createIcons(); });
 
-            // Formatter untuk mengubah **teks** menjadi cetak tebal (Preview Only)
             const formatText = (text) => {
                 if (!text) return null;
                 return text.split('\n').map((line, i) => (
@@ -457,7 +524,7 @@
                                 </div>
                                 <div>
                                     <h1 className="font-bold text-xl tracking-tight">DeepLearning<span className="text-brand-500 font-light">OS</span></h1>
-                                    <p className="text-xs text-slate-400 font-medium tracking-wide">Dynamic PMM Integrated Workspace</p>
+                                    <p className="text-xs text-slate-400 font-medium tracking-wide">PMM & SK BSKAP 2026 Architecture</p>
                                 </div>
                             </div>
                         </div>
@@ -467,7 +534,7 @@
                         <div className={`transition-all duration-700 ease-in-out ${isGenerated ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100 h-auto'}`}>
                             
                             <div className="flex gap-3 mb-10 no-print overflow-x-auto pb-4 scrollbar-hide snap-x">
-                                {['Identifikasi', 'Desain', 'Skenario', 'Asesmen & Solusi', 'Instrumen'].map((label, idx) => (
+                                {['Identifikasi Kurikulum', 'Desain PMM', 'Skenario Skenik', 'Asesmen & Mitigasi', 'Lembar Lampiran'].map((label, idx) => (
                                     <button key={idx} onClick={() => setStep(idx + 1)}
                                         className={`snap-center shrink-0 px-6 py-3 rounded-full text-sm font-bold transition-all duration-300 whitespace-nowrap border
                                         ${step === idx + 1 
@@ -478,29 +545,42 @@
                                 ))}
                             </div>
 
-                            {/* TAHAP 1 */}
+                            {/* TAHAP 1: IDENTIFIKASI DAN CASCADING DATA */}
                             {step === 1 && (
                                 <div className="glass-panel p-10 rounded-3xl space-y-8 animate-fade-in">
-                                    <div className="border-b pb-8 border-slate-700/50">
-                                        <label htmlFor="topik-input" className="block text-xl font-bold text-white mb-3">Topik Pembelajaran</label>
-                                        <input id="topik-input" type="text" name="topik" value={formData.topik} onChange={handleInputChange} placeholder="Ketik Topik (Misal: Vulkanisme, Teks Persuasi)" className="w-full p-5 rounded-2xl text-xl font-bold placeholder-slate-600 focus:outline-none focus:border-brand-500" />
-                                        <p className="text-sm text-brand-400 mt-3 flex items-center gap-2"><i data-lucide="sparkles" className="w-4 h-4"></i> AI akan menyusun seluruh kalimat berdasarkan Topik dan Mapel Anda.</p>
+                                    <div className="p-6 bg-slate-900/40 rounded-2xl border border-slate-700/50 grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="flex flex-col gap-1.5">
+                                            <label htmlFor="elemen-select" className="text-sm font-semibold text-slate-300 ml-1">Elemen CP BSKAP 2026</label>
+                                            <select id="elemen-select" value={selectedElemen} onChange={(e) => setSelectedElemen(e.target.value)} className="w-full p-3 rounded-xl focus:outline-none focus:border-brand-500">
+                                                {Object.keys(DATABASE_KURIKULUM[selectedFase][selectedMapel]).map(el => <option key={el} value={el}>{el}</option>)}
+                                            </select>
+                                        </div>
                                     </div>
+
+                                    <div className="flex flex-col gap-1.5">
+                                        <label htmlFor="cp-viewer" className="text-sm font-bold text-brand-400 ml-1 flex items-center gap-1.5"><i data-lucide="file-check" className="w-4 h-4"></i> Teks Capaian Pembelajaran Resmi Kementerian (Kunci Validitas)</label>
+                                        <textarea id="cp-viewer" readOnly value={formData.capaianPembelajaran} className="w-full p-4 rounded-xl text-xs bg-slate-950/80 text-slate-400 border border-slate-800 leading-relaxed font-mono" rows={3}></textarea>
+                                    </div>
+
+                                    <div className="border-b pb-4 border-slate-700/50">
+                                        <label htmlFor="topik-input" className="block text-xl font-bold text-white mb-2">Topik Spesifik Materi</label>
+                                        <input id="topik-input" type="text" name="topik" value={formData.topik} onChange={handleInputChange} placeholder="Ketik Topik Bahasan (Misal: Struktur Bumi & Vulkanisme, Algoritma Pemrograman Blok)" className="w-full p-4 rounded-xl text-lg font-bold placeholder-slate-600 focus:outline-none focus:border-brand-500" />
+                                    </div>
+
                                     <div className="grid md:grid-cols-2 gap-6">
-                                        <InputGroup label="Mata Pelajaran" name="mapel" val={formData.mapel} change={handleInputChange} placeholder="Misal: IPA, Bahasa Indonesia" />
-                                        <InputGroup label="Lingkup Materi" name="lingkupMateri" val={formData.lingkupMateri} change={handleInputChange} />
-                                        <InputGroup label="Nama Guru" name="guru" val={formData.guru} change={handleInputChange} />
-                                        <InputGroup label="Sekolah" name="sekolah" val={formData.sekolah} change={handleInputChange} />
+                                        <InputGroup label="Nama Sekolah" name="sekolah" val={formData.sekolah} change={handleInputChange} />
+                                        <InputGroup label="Lingkup Materi (Otomatis AI)" name="lingkupMateri" val={formData.lingkupMateri} change={handleInputChange} />
+                                        <InputGroup label="Nama Guru Pengampu" name="guru" val={formData.guru} change={handleInputChange} />
                                         <InputGroup label="Kelas / Semester" name="kelas" val={formData.kelas} change={handleInputChange} />
                                         <InputGroup label="Alokasi Waktu" name="waktu" val={formData.waktu} change={handleInputChange} />
-                                        <div className="md:col-span-2 border-t border-slate-700/50 mt-2 pt-4 grid md:grid-cols-2 gap-6">
-                                            <InputGroup label="Nama Kepala Sekolah" name="kepalaSekolah" val={formData.kepalaSekolah} change={handleInputChange} placeholder="Nama Lengkap dengan Gelar" />
-                                            <InputGroup label="NIP Kepala Sekolah" name="nipKepalaSekolah" val={formData.nipKepalaSekolah} change={handleInputChange} placeholder="Ketik '-' jika tidak ada NIP" />
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <InputGroup label="Nama Kepala Sekolah" name="kepalaSekolah" val={formData.kepalaSekolah} change={handleInputChange} />
+                                            <InputGroup label="NIP Kepala Sekolah" name="nipKepalaSekolah" val={formData.nipKepalaSekolah} change={handleInputChange} />
                                         </div>
                                     </div>
                                     
-                                    <div className="p-6 bg-slate-900/50 rounded-2xl border border-slate-700/50 space-y-6 mt-4">
-                                        <h3 className="font-bold text-lg flex items-center gap-2 text-white"><i data-lucide="users" className="w-5 h-5 text-brand-500"></i> Kesiapan Murid & Karakteristik</h3>
+                                    <div className="p-6 bg-slate-900/30 rounded-2xl border border-slate-700/50 space-y-4">
+                                        <h3 className="font-bold text-white flex items-center gap-2"><i data-lucide="shield-check" className="w-5 h-5 text-brand-500"></i> Matriks Kesiapan & Karakteristik</h3>
                                         <AreaGroup label="Kesiapan Konsep (Mindful)" name="kesiapanKonsep" val={formData.kesiapanKonsep} change={handleInputChange} rows={2} />
                                         <AreaGroup label="Kesiapan Teknis (Psikomotor)" name="kesiapanTeknis" val={formData.kesiapanTeknis} change={handleInputChange} rows={2} />
                                         <AreaGroup label="Kesiapan Mental (Joyful)" name="kesiapanMental" val={formData.kesiapanMental} change={handleInputChange} rows={2} />
@@ -508,7 +588,7 @@
                                     </div>
 
                                     <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-700/50">
-                                        <label className="block text-sm font-bold mb-3 text-slate-300">Dimensi Profil Lulusan (DPL)</label>
+                                        <label className="block text-sm font-bold mb-3 text-slate-300">Dimensi Profil Pelajar Pancasila (DPL)</label>
                                         <div className="flex flex-wrap gap-3">
                                             {["Beriman & Bertakwa", "Berkebinekaan Global", "Bergotong Royong", "Mandiri", "Bernalar Kritis", "Kreatif", "Kesehatan"].map((d) => (
                                                 <button key={d} onClick={() => setFormData(p => ({...p, dpl: p.dpl.includes(d) ? p.dpl.filter(i => i!==d) : [...p.dpl, d]}))} className={`px-4 py-2 text-sm font-medium rounded-full border transition-all ${formData.dpl.includes(d) ? 'bg-brand-600 text-white border-brand-500 shadow-[0_0_10px_rgba(37,99,235,0.4)]' : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'}`}>
@@ -518,37 +598,36 @@
                                         </div>
                                     </div>
 
-                                    <div className="flex justify-end pt-4"><ButtonPrimary onClick={() => setStep(2)} icon="arrow-right">Lanjut ke Desain</ButtonPrimary></div>
+                                    <div className="flex justify-end"><ButtonPrimary onClick={() => setStep(2)} icon="arrow-right">Lanjut Desain</ButtonPrimary></div>
                                 </div>
                             )}
 
-                            {/* TAHAP 2 - DENGAN DROPDOWN FOKUS BARU */}
+                            {/* TAHAP 2: DESAIN RUBRIK PMM */}
                             {step === 2 && (
                                 <div className="glass-panel p-10 rounded-3xl space-y-8 animate-fade-in">
                                     <div className="p-6 bg-gradient-to-r from-slate-900/80 to-brand-900/20 rounded-2xl border border-brand-500/30 space-y-4">
                                         <div>
-                                            <label htmlFor="indikator-select" className="block text-lg font-bold text-white mb-3 flex items-center gap-2"><i data-lucide="target" className="w-5 h-5 text-brand-400"></i> Pilih Indikator PMM</label>
+                                            <label htmlFor="indikator-select" className="block text-lg font-bold text-white mb-2 flex items-center gap-2"><i data-lucide="target" className="w-5 h-5 text-brand-400"></i> Rubrik Indikator Kinerja PMM</label>
                                             <select id="indikator-select" name="indikator" value={formData.indikator} onChange={(e) => {
                                                 handleInputChange(e);
                                                 setFormData(prev => ({...prev, indikator: e.target.value, fokusPMM: "Semua Fokus"}));
-                                            }} className="w-full p-4 rounded-xl text-lg font-bold bg-slate-950/80 border-slate-600/50 cursor-pointer focus:outline-none focus:border-brand-500">
+                                            }} className="w-full p-4 rounded-xl font-bold bg-slate-950/80 border-slate-600/50 cursor-pointer focus:outline-none">
                                                 {Object.keys(DATA_PMM_FULL).map(ind => <option key={ind} value={ind}>{ind}</option>)}
                                             </select>
                                         </div>
                                         <div className="pt-4 border-t border-brand-500/20">
-                                            <label htmlFor="fokus-select" className="block text-sm font-semibold text-slate-300 mb-2">Target Fokus Perilaku</label>
-                                            <select id="fokus-select" name="fokusPMM" value={formData.fokusPMM} onChange={handleInputChange} className="w-full p-4 rounded-xl font-medium bg-slate-950/80 border-slate-600/50 cursor-pointer focus:outline-none focus:border-brand-500">
-                                                <option value="Semua Fokus">Gunakan Semua Fokus (Skenario Penuh)</option>
+                                            <label htmlFor="fokus-select" className="block text-sm font-semibold text-slate-300 mb-2">Target Fokus Perilaku Spesifik</label>
+                                            <select id="fokus-select" name="fokusPMM" value={formData.fokusPMM} onChange={handleInputChange} className="w-full p-4 rounded-xl bg-slate-950/80 border-slate-600/50 cursor-pointer focus:outline-none">
+                                                <option value="Semua Fokus">Gunakan Semua Fokus (Skenario Penuh - 9 Perilaku Wajib)</option>
                                                 {Object.keys(DATA_PMM_FULL[formData.indikator]).map(fokus => <option key={fokus} value={fokus}>{fokus}</option>)}
                                             </select>
-                                            <p className="text-[11px] text-brand-300 mt-2 italic">*AI akan menenun perilaku dari target fokus ini secara kontekstual ke dalam RPP Anda.</p>
                                         </div>
                                     </div>
                                     
                                     <div className="grid md:grid-cols-2 gap-6">
                                         <div className="flex flex-col gap-1.5">
-                                            <label htmlFor="metode-select" className="text-sm font-semibold text-slate-300 ml-1">Model / Praktik Pedagogis</label>
-                                            <select id="metode-select" name="metode" value={formData.metode} onChange={handleInputChange} className="w-full p-4 rounded-xl font-medium bg-slate-950/80 border-slate-600/50 cursor-pointer focus:outline-none focus:border-brand-500">
+                                            <label htmlFor="metode-select" className="text-sm font-semibold text-slate-300 ml-1">Praktik Pedagogis / Model Pembelajaran</label>
+                                            <select id="metode-select" name="metode" value={formData.metode} onChange={handleInputChange} className="w-full p-4 rounded-xl font-medium bg-slate-950/80 border-slate-600/50 focus:outline-none">
                                                 <optgroup label="Pemecahan Masalah & Penemuan">
                                                     <option value="Problem-Based Learning (PBL)">Problem-Based Learning (PBL)</option>
                                                     <option value="Project-Based Learning (PjBL)">Project-Based Learning (PjBL)</option>
@@ -579,226 +658,217 @@
                                                 </optgroup>
                                             </select>
                                         </div>
-                                        <InputGroup label="Kemitraan Pembelajaran" name="kemitraan" val={formData.kemitraan} change={handleInputChange} />
+                                        <InputGroup label="Kemitraan Komunitas Belajar" name="kemitraan" val={formData.kemitraan} change={handleInputChange} />
                                     </div>
                                     
-                                    <AreaGroup label="Tujuan Pembelajaran" name="tujuanPembelajaran" val={formData.tujuanPembelajaran} change={handleInputChange} rows={3} />
+                                    <AreaGroup label="Tujuan Pembelajaran Sesuai Elemen & Sikap (Otomatis AI)" name="tujuanPembelajaran" val={formData.tujuanPembelajaran} change={handleInputChange} rows={3} />
                                     
-                                    <div className="flex justify-between pt-4"><ButtonSecondary onClick={() => setStep(1)}>Kembali</ButtonSecondary><ButtonPrimary onClick={() => setStep(3)} icon="arrow-right">Lanjut Skenario</ButtonPrimary></div>
+                                    <div className="flex justify-between"><ButtonSecondary onClick={() => setStep(1)}>Kembali</ButtonSecondary><ButtonPrimary onClick={() => setStep(3)} icon="arrow-right">Lanjut Skenario</ButtonPrimary></div>
                                 </div>
                             )}
 
-                            {/* TAHAP 3 */}
+                            {/* TAHAP 3: SKENARIO AKTIVITAS */}
                             {step === 3 && (
                                 <div className="glass-panel p-10 rounded-3xl space-y-8 animate-fade-in">
-                                    <div className="bg-brand-900/30 p-4 rounded-xl border border-brand-500/30 flex items-start gap-3">
-                                        <i data-lucide="info" className="w-5 h-5 text-brand-400 shrink-0 mt-0.5"></i>
-                                        <p className="text-sm text-brand-200 leading-relaxed">Teks yang diapit tanda bintang ganda (<code>**teks**</code>) akan tercetak <strong>Tebal</strong> di Dokumen PDF. Ini penanda Fokus Aksi Observasi Kepala Sekolah.</p>
-                                    </div>
-                                    
-                                    <AreaGroup label="1. Pendahuluan (Berkesadaran, Menggembirakan)" name="kegiatanAwal" val={formData.kegiatanAwal} change={handleInputChange} rows={5} />
+                                    <AreaGroup label="1. Langkah Pendahuluan (Skenario Aksi PMM)" name="kegiatanAwal" val={formData.kegiatanAwal} change={handleInputChange} rows={5} />
                                     
                                     <div className="p-6 bg-slate-900/50 border border-slate-700/50 rounded-2xl space-y-6">
-                                        <h3 className="font-bold text-xl text-white flex items-center gap-2"><i data-lucide="play-circle" className="w-5 h-5 text-brand-500"></i> Kegiatan Inti ({formData.metode})</h3>
-                                        <AreaGroup label="Tahap 1: Memahami" name="kegiatanInti1" val={formData.kegiatanInti1} change={handleInputChange} rows={3} />
-                                        <AreaGroup label="Tahap 2: Mengaplikasi" name="kegiatanInti2" val={formData.kegiatanInti2} change={handleInputChange} rows={3} />
-                                        <AreaGroup label="Tahap 3: Merefleksi" name="kegiatanInti3" val={formData.kegiatanInti3} change={handleInputChange} rows={3} />
+                                        <h3 className="font-bold text-xl text-white flex items-center gap-2"><i data-lucide="play-circle" className="w-5 h-5 text-brand-500"></i> Langkah Inti Kontekstual ({formData.metode})</h3>
+                                        <AreaGroup label="Fase 1: Memahami (Berkesadaran)" name="kegiatanInti1" val={formData.kegiatanInti1} change={handleInputChange} rows={3} />
+                                        <AreaGroup label="Fase 2: Mengaplikasi (Bermakna)" name="kegiatanInti2" val={formData.kegiatanInti2} change={handleInputChange} rows={3} />
+                                        <AreaGroup label="Fase 3: Merefleksi (Menggembirakan)" name="kegiatanInti3" val={formData.kegiatanInti3} change={handleInputChange} rows={3} />
                                     </div>
                                     
-                                    <AreaGroup label="3. Penutup (Berkesadaran, Bermakna)" name="kegiatanPenutup" val={formData.kegiatanPenutup} change={handleInputChange} rows={5} />
+                                    <AreaGroup label="3. Langkah Penutup (Skenario Aksi PMM)" name="kegiatanPenutup" val={formData.kegiatanPenutup} change={handleInputChange} rows={5} />
                                     
-                                    <div className="flex justify-between pt-4"><ButtonSecondary onClick={() => setStep(2)}>Kembali</ButtonSecondary><ButtonPrimary onClick={() => setStep(4)} icon="arrow-right">Lanjut Asesmen</ButtonPrimary></div>
+                                    <div className="flex justify-between"><ButtonSecondary onClick={() => setStep(2)}>Kembali</ButtonSecondary><ButtonPrimary onClick={() => setStep(4)} icon="arrow-right">Lanjut Asesmen</ButtonPrimary></div>
                                 </div>
                             )}
 
-                            {/* TAHAP 4 */}
+                            {/* TAHAP 4: ASESMEN & MITIGASI */}
                             {step === 4 && (
                                 <div className="glass-panel p-10 rounded-3xl space-y-10 animate-fade-in">
                                     <div>
-                                        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2"><i data-lucide="check-square" className="w-6 h-6 text-brand-500"></i> Rencana Asesmen</h2>
-                                        <div className="grid md:grid-cols-3 gap-6">
+                                        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2"><i data-lucide="check-square" className="w-6 h-6 text-brand-500"></i> Rencana Penilaian</h2>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                             <AreaGroup label="Awal (Diagnostik)" name="asesmenAwal" val={formData.asesmenAwal} change={handleInputChange} rows={5} />
-                                            <AreaGroup label="Formatif (Proses)" name="asesmenFormatif" val={formData.asesmenFormatif} change={handleInputChange} rows={5} />
-                                            <AreaGroup label="Sumatif (Akhir)" name="asesmenSumatif" val={formData.asesmenSumatif} change={handleInputChange} rows={5} />
+                                            <AreaGroup label="Formatif (Proses Sikap)" name="asesmenFormatif" val={formData.asesmenFormatif} change={handleInputChange} rows={5} />
+                                            <AreaGroup label="Sumatif (Akhir Kinerja)" name="asesmenSumatif" val={formData.asesmenSumatif} change={handleInputChange} rows={5} />
                                         </div>
                                     </div>
 
                                     <div className="pt-8 border-t border-slate-700/50">
-                                        <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2"><i data-lucide="life-buoy" className="w-6 h-6 text-red-500"></i> Posko Solusi (Troubleshooting)</h2>
+                                        <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2"><i data-lucide="life-buoy" className="w-6 h-6 text-red-500"></i> Posko Solusi (Troubleshooting Penyelamatan Kelas)</h2>
                                         <div className="space-y-4 mt-6">
                                             {formData.troubleshooting.map((item, idx) => (
                                                 <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-900/60 p-4 rounded-xl border border-slate-700/50">
-                                                    <input type="text" value={item.masalah} onChange={(e) => updateTrouble(idx, 'masalah', e.target.value)} className="p-3 text-sm rounded-lg outline-none bg-slate-950/80 text-red-400 font-medium" placeholder="Masalah" />
+                                                    <input type="text" value={item.masalah} onChange={(e) => updateTrouble(idx, 'masalah', e.target.value)} className="p-3 text-sm rounded-lg outline-none bg-slate-950/80 text-red-400 font-bold" placeholder="Masalah" />
                                                     <input type="text" value={item.penyebab} onChange={(e) => updateTrouble(idx, 'penyebab', e.target.value)} className="p-3 text-sm rounded-lg outline-none bg-slate-950/80" placeholder="Penyebab" />
-                                                    <input type="text" value={item.solusi} onChange={(e) => updateTrouble(idx, 'solusi', e.target.value)} className="p-3 text-sm rounded-lg outline-none bg-slate-950/80 text-emerald-400 font-medium" placeholder="Solusi" />
+                                                    <input type="text" value={item.solusi} onChange={(e) => updateTrouble(idx, 'solusi', e.target.value)} className="p-3 text-sm rounded-lg outline-none bg-slate-950/80 text-emerald-400 font-bold" placeholder="Solusi" />
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="flex justify-between pt-4"><ButtonSecondary onClick={() => setStep(3)}>Kembali</ButtonSecondary><ButtonPrimary onClick={() => setStep(5)} icon="arrow-right">Lanjut Instrumen</ButtonPrimary></div>
+                                    <div className="flex justify-between"><ButtonSecondary onClick={() => setStep(3)}>Kembali</ButtonSecondary><ButtonPrimary onClick={() => setStep(5)} icon="arrow-right">Lanjut Instrumen</ButtonPrimary></div>
                                 </div>
                             )}
 
-                            {/* TAHAP 5 */}
+                            {/* TAHAP 5: LEMBAR LAMPIRAN */}
                             {step === 5 && (
                                 <div className="glass-panel p-10 rounded-3xl space-y-8 animate-fade-in">
-                                    <h2 className="text-2xl font-bold text-white flex items-center gap-2"><i data-lucide="file-text" className="w-6 h-6 text-brand-500"></i> Instrumen Asesmen & Rubrik</h2>
+                                    <h2 className="text-2xl font-bold text-white flex items-center gap-2"><i data-lucide="file-text" className="w-6 h-6 text-brand-500"></i> Draf Lembar Lampiran</h2>
                                     <div className="space-y-8">
+                                        <AreaGroup label="1. Detail Instrumen Awal" name="instrumenAwal" val={formData.instrumenAwal} change={handleInputChange} rows={4} />
                                         <div className="p-6 bg-slate-900/50 rounded-2xl border border-slate-700/50">
-                                            <AreaGroup label="1. Instrumen Asesmen Awal (Diagnostik)" name="instrumenAwal" val={formData.instrumenAwal} change={handleInputChange} rows={4} />
-                                        </div>
-                                        <div className="p-6 bg-slate-900/50 rounded-2xl border border-slate-700/50">
-                                            <h3 className="font-bold text-white mb-4 text-lg">2. Tabel Formatif Siswa (Untuk Indikator PMM: {formData.indikator})</h3>
-                                            <div className="grid md:grid-cols-2 gap-6">
-                                                <AreaGroup label="Daftar Aspek yang Diamati (Baris Tabel)" name="instrumenFormatifAspek" val={formData.instrumenFormatifAspek} change={handleInputChange} rows={6} />
-                                                <AreaGroup label="Keterangan / Legend" name="instrumenFormatifLegend" val={formData.instrumenFormatifLegend} change={handleInputChange} rows={6} />
+                                            <h3 className="font-bold text-white mb-4 text-lg">2. Lembar Observasi Formatif Siswa (Sinkron Indikator: {formData.indikator})</h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <AreaGroup label="Aspek Pengamatan Siswa (Baris Tabel)" name="instrumenFormatifAspek" val={formData.instrumenFormatifAspek} change={handleInputChange} rows={5} />
+                                                <AreaGroup label="Legend Keterangan Penilaian" name="instrumenFormatifLegend" val={formData.instrumenFormatifLegend} change={handleInputChange} rows={5} />
                                             </div>
                                         </div>
-                                        <div className="p-6 bg-slate-900/50 rounded-2xl border border-slate-700/50">
-                                            <AreaGroup label={`3. Instrumen Sumatif (${formData.metode})`} name="instrumenSumatif" val={formData.instrumenSumatif} change={handleInputChange} rows={5} />
-                                        </div>
+                                        <AreaGroup label="3. Detail Instrumen Sumatif" name="instrumenSumatif" val={formData.instrumenSumatif} change={handleInputChange} rows={5} />
                                     </div>
-                                    <div className="flex justify-between pt-6 border-t border-slate-700/50"><ButtonSecondary onClick={() => setStep(4)}>Kembali</ButtonSecondary><ButtonPrimary onClick={() => setIsGenerated(true)} icon="printer">Generate PDF</ButtonPrimary></div>
+                                    <div className="flex justify-between pt-6 border-t border-slate-700/50"><ButtonSecondary onClick={() => setStep(4)}>Kembali</ButtonSecondary><ButtonPrimary onClick={() => setIsGenerated(true)} icon="printer">Generate PDF & Tampilkan</ButtonPrimary></div>
                                 </div>
                             )}
                         </div>
 
-                        {/* OUTPUT PREVIEW SECTION */}
+                        {/* OUTPUT PREVIEW SECTION (A4 FOR PRINTING) */}
                         {isGenerated && (
                             <div className="pb-20 animate-fade-in">
                                 <div className="flex justify-between items-center mb-8 no-print glass-panel p-6 rounded-2xl">
                                     <h2 className="text-2xl font-bold text-white">Dokumen RPP Siap Cetak</h2>
                                     <div className="flex gap-4">
-                                        <button onClick={() => window.print()} className="bg-white text-slate-900 px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-200 shadow-lg"><i data-lucide="printer" className="w-5 h-5"></i> Cetak PDF</button>
-                                        <button onClick={() => setIsGenerated(false)} className="bg-slate-800 text-white border border-slate-600 px-6 py-2.5 rounded-xl font-bold hover:bg-slate-700"><i data-lucide="edit" className="w-5 h-5 inline mr-2"></i>Edit RPP</button>
+                                        <button onClick={() => window.print()} className="bg-white text-slate-900 px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-200 shadow-lg"><i data-lucide="printer" className="w-5 h-5"></i> Cetak Dokumen</button>
+                                        <button onClick={() => setIsGenerated(false)} className="bg-slate-800 text-white border border-slate-600 px-6 py-2.5 rounded-xl font-bold hover:bg-slate-700"><i data-lucide="edit" className="w-5 h-5 inline mr-2"></i>Edit Kembali</button>
                                     </div>
                                 </div>
 
-                                {/* A4 Document 1 */}
-                                <div className="bg-white text-black p-12 shadow-2xl mx-auto max-w-[210mm] min-h-[297mm] text-[13px] leading-[1.6]">
-                                    <div className="text-center border-b-[3px] border-double border-black pb-4 mb-6">
+                                {/* PAGE 1: RPP UTAMA */}
+                                <div className="bg-white text-black p-12 shadow-2xl mx-auto max-w-[210mm] min-h-[297mm] text-[12.5px] leading-[1.55]">
+                                    <div className="text-center border-b-[3px] border-double border-black pb-3 mb-5">
                                         <h1 className="text-xl font-bold uppercase tracking-wide">PERENCANAAN PEMBELAJARAN (RPP)</h1>
-                                        <h2 className="font-semibold uppercase text-[15px] mt-1">{formData.mapel} (DEEP LEARNING)</h2>
+                                        <h2 className="font-semibold uppercase text-[14px] mt-0.5">{formData.mapel} (PENDEKATAN DEEP LEARNING)</h2>
                                     </div>
 
-                                    <table className="w-full mb-6 border-collapse">
+                                    <table className="w-full mb-5 border-collapse text-[12px]">
                                         <tbody>
-                                            <tr><td className="font-bold w-[120px] py-1 align-top">Nama Sekolah</td><td className="w-2 align-top">:</td><td className="align-top pr-4">{formData.sekolah}</td><td className="font-bold w-[120px] py-1 align-top">Lingkup Materi</td><td className="w-2 align-top">:</td><td className="align-top">{formData.lingkupMateri}</td></tr>
-                                            <tr><td className="font-bold py-1 align-top">Mata Pelajaran</td><td className="align-top">:</td><td className="align-top pr-4">{formData.mapel}</td><td className="font-bold py-1 align-top">Alokasi Waktu</td><td className="align-top">:</td><td className="align-top">{formData.waktu}</td></tr>
-                                            <tr><td className="font-bold py-1 align-top">Kelas/Semester</td><td className="align-top">:</td><td className="align-top pr-4">{formData.kelas}</td><td className="font-bold py-1 align-top">Guru Pengampu</td><td className="align-top">:</td><td className="align-top">{formData.guru}</td></tr>
+                                            <tr><td className="font-bold w-[120px] py-0.5 align-top">Nama Sekolah</td><td className="w-2 align-top">:</td><td className="align-top pr-4">{formData.sekolah}</td><td className="font-bold w-[120px] py-0.5 align-top">Lingkup Materi</td><td className="w-2 align-top">:</td><td className="align-top">{formData.lingkupMateri}</td></tr>
+                                            <tr><td className="font-bold py-0.5 align-top">Mata Pelajaran</td><td className="align-top">:</td><td className="align-top pr-4">{formData.mapel}</td><td className="font-bold py-0.5 align-top">Alokasi Waktu</td><td className="align-top">:</td><td className="align-top">{formData.waktu}</td></tr>
+                                            <tr><td className="font-bold py-0.5 align-top">Kelas/Semester</td><td className="align-top">:</td><td className="align-top pr-4">{formData.kelas}</td><td className="font-bold py-0.5 align-top">Guru Pengampu</td><td className="align-top">:</td><td className="align-top">{formData.guru}</td></tr>
                                         </tbody>
                                     </table>
 
-                                    <div className="mb-5">
-                                        <h3 className="font-bold bg-slate-100 p-1.5 mb-2 uppercase border border-slate-300">I. IDENTIFIKASI & KARAKTERISTIK</h3>
-                                        <div className="ml-2">
-                                            <p className="font-bold underline mb-1">A. Kesiapan Murid</p>
-                                            <ul className="list-disc ml-6 mb-2">
-                                                <li className="mb-0.5"><strong>Konsep (Mindful):</strong> {formData.kesiapanKonsep}</li>
-                                                <li className="mb-0.5"><strong>Teknis (Psikomotor):</strong> {formData.kesiapanTeknis}</li>
-                                                <li className="mb-0.5"><strong>Mental (Joyful):</strong> {formData.kesiapanMental}</li>
-                                            </ul>
-                                            <p className="font-bold underline mb-1">B. Karakteristik Materi</p>
-                                            <p className="mb-2 text-justify">{formData.karakteristikMateri}</p>
-                                            <p className="font-bold underline mb-1">C. Dimensi Profil Lulusan</p>
-                                            <p>{formData.dpl.join(", ")}</p>
+                                    <div className="mb-4">
+                                        <h3 className="font-bold bg-slate-100 p-1.5 mb-2 uppercase border border-slate-300 text-[13px]">I. IDENTIFIKASI & MATRIKS KURIKULUM</h3>
+                                        <div className="ml-1 pl-1 space-y-2">
+                                            <p className="text-justify"><strong>A. Capaian Pembelajaran (BSKAP 2026):</strong> <span className="italic text-gray-700">{formData.capaianPembelajaran}</span></p>
+                                            <div>
+                                                <p className="font-bold underline mb-0.5">B. Kondisi Kesiapan Lulusan:</p>
+                                                <ul className="list-disc ml-5 space-y-0.5">
+                                                    <li><strong>Konsep (Mindful):</strong> {formData.kesiapanKonsep}</li>
+                                                    <li><strong>Teknis (Psikomotor):</strong> {formData.kesiapanTeknis}</li>
+                                                    <li><strong>Mental (Joyful):</strong> {formData.kesiapanMental}</li>
+                                                </ul>
+                                            </div>
+                                            <p className="text-justify"><strong>C. Karakteristik Materi:</strong> {formData.karakteristikMateri}</p>
+                                            <p><strong>D. Dimensi Profil Pelajar Pancasila:</strong> {formData.dpl.join(", ")}</p>
                                         </div>
                                     </div>
 
-                                    <div className="mb-5">
-                                        <h3 className="font-bold bg-slate-100 p-1.5 mb-2 uppercase border border-slate-300">II. DESAIN PEMBELAJARAN</h3>
-                                        <div className="ml-2">
-                                            <p className="mb-1 text-justify"><strong>Tujuan Pembelajaran:</strong> {formData.tujuanPembelajaran}</p>
-                                            <p className="mb-1"><strong>Indikator Kinerja PMM:</strong> {formData.indikator} <span className="italic font-normal">({formData.fokusPMM})</span></p>
-                                            <p className="mb-1"><strong>Model Pembelajaran:</strong> {formData.metode}</p>
-                                            <p className="mb-1"><strong>Kemitraan Pembelajaran:</strong> {formData.kemitraan}</p>
+                                    <div className="mb-4">
+                                        <h3 className="font-bold bg-slate-100 p-1.5 mb-2 uppercase border border-slate-300 text-[13px]">II. DESAIN STRATEGIS</h3>
+                                        <div className="ml-1 pl-1 space-y-1">
+                                            <p className="text-justify"><strong>Tujuan Pembelajaran:</strong> {formData.tujuanPembelajaran}</p>
+                                            <p><strong>Indikator Evaluasi PMM:</strong> {formData.indikator} <span className="font-bold">({formData.fokusPMM})</span></p>
+                                            <p><strong>Model / Praktik Pedagogis:</strong> {formData.metode}</p>
+                                            <p><strong>Kemitraan Komunitas Belajar:</strong> {formData.kemitraan}</p>
                                         </div>
                                     </div>
 
-                                    <div className="mb-6">
-                                        <h3 className="font-bold bg-slate-100 p-1.5 mb-2 uppercase border border-slate-300">III. PENGALAMAN BELAJAR</h3>
-                                        <div className="mb-3 ml-2"><p className="font-bold underline mb-1">1. Pendahuluan</p><div className="ml-2 pl-2 border-l-2 border-slate-200">{formatText(formData.kegiatanAwal)}</div></div>
-                                        <div className="mb-3 ml-2">
-                                            <p className="font-bold underline mb-1">2. Kegiatan Inti</p>
-                                            <table className="w-full border-collapse border border-black mt-2">
-                                                <thead><tr className="bg-slate-50"><th className="border border-black p-2 text-left w-[28%]">Tahapan</th><th className="border border-black p-2 text-left">Aktivitas Pembelajaran</th></tr></thead>
+                                    <div className="mb-4">
+                                        <h3 className="font-bold bg-slate-100 p-1.5 mb-2 uppercase border border-slate-300 text-[13px]">III. PENGALAMAN BELAJAR BERKONTEKS</h3>
+                                        <div className="mb-2 ml-1"><p className="font-bold underline mb-0.5">1. Skenario Pendahuluan</p><div className="ml-2 pl-1.5 border-l-2 border-slate-200">{formatText(formData.kegiatanAwal)}</div></div>
+                                        <div className="mb-2 ml-1">
+                                            <p className="font-bold underline mb-0.5">2. Sintaks Inti Model</p>
+                                            <table className="w-full border-collapse border border-black mt-1.5 text-[11.5px]">
+                                                <thead><tr className="bg-slate-50"><th className="border border-black p-1.5 text-left w-[25%]">Tahapan Deep</th><th className="border border-black p-1.5 text-left">Aktivitas Pembelajaran Kontekstual</th></tr></thead>
                                                 <tbody>
-                                                    <tr><td className="border border-black p-2 align-top font-bold">1. Memahami<br/><span className="text-[11px] font-normal italic">(Berkesadaran)</span></td><td className="border border-black p-2 align-top">{formatText(formData.kegiatanInti1)}</td></tr>
-                                                    <tr><td className="border border-black p-2 align-top font-bold">2. Mengaplikasi<br/><span className="text-[11px] font-normal italic">(Bermakna)</span></td><td className="border border-black p-2 align-top">{formatText(formData.kegiatanInti2)}</td></tr>
-                                                    <tr><td className="border border-black p-2 align-top font-bold">3. Merefleksi<br/><span className="text-[11px] font-normal italic">(Menggembirakan)</span></td><td className="border border-black p-2 align-top">{formatText(formData.kegiatanInti3)}</td></tr>
+                                                    <tr><td className="border border-black p-1.5 align-top font-bold">1. Memahami<br/><span className="text-[10px] font-normal italic">(Berkesadaran)</span></td><td className="border border-black p-1.5 align-top">{formatText(formData.kegiatanInti1)}</td></tr>
+                                                    <tr><td className="border border-black p-1.5 align-top font-bold">2. Mengaplikasi<br/><span className="text-[10px] font-normal italic">(Bermakna)</span></td><td className="border border-black p-1.5 align-top">{formatText(formData.kegiatanInti2)}</td></tr>
+                                                    <tr><td className="border border-black p-1.5 align-top font-bold">3. Merefleksi<br/><span className="text-[10px] font-normal italic">(Menggembirakan)</span></td><td className="border border-black p-1.5 align-top">{formatText(formData.kegiatanInti3)}</td></tr>
                                                 </tbody>
                                             </table>
                                         </div>
-                                        <div className="ml-2"><p className="font-bold underline mb-1">3. Penutup</p><div className="ml-2 pl-2 border-l-2 border-slate-200">{formatText(formData.kegiatanPenutup)}</div></div>
+                                        <div className="ml-1"><p className="font-bold underline mb-0.5">3. Skenario Penutup</p><div className="ml-2 pl-1.5 border-l-2 border-slate-200">{formatText(formData.kegiatanPenutup)}</div></div>
                                     </div>
                                     
                                     <div className="page-break-inside-avoid">
-                                        <h3 className="font-bold bg-slate-100 p-1.5 mb-2 uppercase border border-slate-300">IV. ASESMEN & LAMPIRAN</h3>
-                                        <div className="grid grid-cols-3 gap-3 mb-5">
-                                            <div className="border border-black p-2"><p className="font-bold text-center border-b border-black pb-1 mb-1.5">Awal</p><p className="text-[12px]">{formData.asesmenAwal}</p></div>
-                                            <div className="border border-black p-2"><p className="font-bold text-center border-b border-black pb-1 mb-1.5">Formatif</p><p className="text-[12px]">{formData.asesmenFormatif}</p></div>
-                                            <div className="border border-black p-2"><p className="font-bold text-center border-b border-black pb-1 mb-1.5">Sumatif</p><p className="text-[12px]">{formData.asesmenSumatif}</p></div>
+                                        <h3 className="font-bold bg-slate-100 p-1.5 mb-2 uppercase border border-slate-300 text-[13px]">IV. MATRIKS ASESMEN & TANDA TANGAN</h3>
+                                        <div className="grid grid-cols-3 gap-2 mb-4 text-[11.5px]">
+                                            <div className="border border-black p-1.5"><p className="font-bold text-center border-b border-black pb-0.5 mb-1">Awal (Diagnostik)</p><p>{formData.asesmenAwal}</p></div>
+                                            <div className="border border-black p-1.5"><p className="font-bold text-center border-b border-black pb-0.5 mb-1">Formatif (Sikap)</p><p>{formData.asesmenFormatif}</p></div>
+                                            <div className="border border-black p-1.5"><p className="font-bold text-center border-b border-black pb-0.5 mb-1">Sumatif (Kinerja)</p><p>{formData.asesmenSumatif}</p></div>
                                         </div>
 
-                                        <p className="font-bold mb-1.5 underline">POSKO SOLUSI (Panduan Troubleshooting)</p>
-                                        <table className="w-full border-collapse border border-black text-[12px]">
-                                            <thead><tr className="bg-slate-50"><th className="border border-black p-2 text-left w-[30%]">Masalah yang Terjadi</th><th className="border border-black p-2 text-left w-[35%]">Mengapa Terjadi?</th><th className="border border-black p-2 text-left">Langkah Solusi</th></tr></thead>
+                                        <p className="font-bold mb-1 text-[11.5px] underline">POSKO SOLUSI (Panduan Praktis Troubleshooting Kelas)</p>
+                                        <table className="w-full border-collapse border border-black text-[11px] mb-6">
+                                            <thead><tr className="bg-slate-50"><th className="border border-black p-1 text-left w-[30%]">Anomali Masalah</th><th className="border border-black p-1 text-left w-[35%]">Akar Penyebab</th><th className="border border-black p-1 text-left">Langkah Solusi Klinis</th></tr></thead>
                                             <tbody>
                                                 {formData.troubleshooting.map((t, i) => (
-                                                    <tr key={i}><td className="border border-black p-2 font-bold">{t.masalah}</td><td className="border border-black p-2">{t.penyebab}</td><td className="border border-black p-2">{t.solusi}</td></tr>
+                                                    <tr key={i}><td className="border border-black p-1 font-bold">{t.masalah}</td><td className="border border-black p-1">{t.penyebab}</td><td className="border border-black p-1 text-emerald-800">{t.solusi}</td></tr>
                                                 ))}
                                             </tbody>
                                         </table>
                                         
-                                        <div className="mt-16 flex justify-between text-[13px] font-bold page-break-inside-avoid">
+                                        <div className="mt-12 flex justify-between text-[12px] font-bold page-break-inside-avoid">
                                             <div className="text-center w-56">
                                                 <p>Mengetahui,</p>
                                                 <p>Kepala Sekolah</p>
                                                 <br/><br/><br/>
-                                                <p className="border-b border-black inline-block min-w-[150px] pb-1">{formData.kepalaSekolah || "........................................"}</p>
-                                                <p className="mt-1 font-normal">NIP. {formData.nipKepalaSekolah || "........................"}</p>
+                                                <p className="border-b border-black inline-block min-w-[160px] pb-0.5">{formData.kepalaSekolah || "........................................"}</p>
+                                                <p className="mt-0.5 font-normal text-[11px]">NIP. {formData.nipKepalaSekolah || "........................"}</p>
                                             </div>
                                             <div className="text-center w-56">
                                                 <p>Guru Mata Pelajaran</p>
                                                 <br/><br/><br/>
-                                                <p className="border-b border-black inline-block min-w-[150px] pb-1">{formData.guru || "........................................"}</p>
+                                                <p className="border-b border-black inline-block min-w-[160px] pb-0.5">{formData.guru || "........................................"}</p>
+                                                <p className="mt-0.5 font-normal text-[11px] text-white select-none">.</p>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* A4 Document 2 - LAMPIRAN */}
+                                {/* PAGE 2: LAMPIRAN INSTRUMEN */}
                                 <div className="bg-white text-black p-12 shadow-2xl mx-auto max-w-[210mm] min-h-[297mm] page-break mt-10 text-[13px] leading-[1.6]">
-                                    <div className="text-center border-b-[3px] border-double border-black pb-4 mb-8">
+                                    <div className="text-center border-b-[3px] border-double border-black pb-3 mb-6">
                                         <h1 className="text-xl font-bold uppercase tracking-wide">LAMPIRAN INSTRUMEN ASESMEN</h1>
                                     </div>
-                                    <div className="space-y-8">
+                                    <div className="space-y-6">
                                         <div>
-                                            <div className="font-bold bg-slate-100 p-1.5 mb-3 uppercase border border-slate-300">1. ASESMEN AWAL (DIAGNOSTIK)</div>
-                                            <div className="border border-black p-5 whitespace-pre-line">{formData.instrumenAwal}</div>
+                                            <div className="font-bold bg-slate-100 p-1.5 mb-2 uppercase border border-slate-300 text-[12px]">1. MATRIKS SOAL DIAGNOSTIK KOGNITIF AWAL</div>
+                                            <div className="border border-black p-4 whitespace-pre-line text-[12px] bg-slate-50/50">{formData.instrumenAwal}</div>
                                         </div>
                                         <div>
-                                            <div className="font-bold bg-slate-100 p-1.5 mb-2 uppercase border border-slate-300">2. LEMBAR OBSERVASI FORMATIF SISWA</div>
-                                            <table className="w-full border-collapse border border-black text-[12px] mb-4 mt-3">
+                                            <div className="font-bold bg-slate-100 p-1.5 mb-1 uppercase border border-slate-300 text-[12px]">2. LEMBAR OBSERVASI FORMATIF SISWA SINKRON RUBRIK PMM</div>
+                                            <table className="w-full border-collapse border border-black text-[11.5px] mb-3 mt-2">
                                                 <thead>
-                                                    <tr className="bg-slate-50"><th className="border border-black p-2.5 w-[40%] text-left">Aspek Sikap yang Diamati</th><th className="border border-black p-2.5 text-center w-[15%]">Baru Memulai</th><th className="border border-black p-2.5 text-center w-[15%]">Berkembang</th><th className="border border-black p-2.5 text-center w-[15%]">Cakap</th><th className="border border-black p-2.5 text-center w-[15%]">Mahir</th></tr>
+                                                    <tr className="bg-slate-50"><th className="border border-black p-2 w-[45%] text-left">Aspek Sikap Target Evaluasi</th><th className="border border-black p-2 text-center w-[13.7%]">Baru Memulai</th><th className="border border-black p-2 text-center w-[13.7%]">Berkembang</th><th className="border border-black p-2 text-center w-[13.7%]">Cakap</th><th className="border border-black p-2 text-center w-[13.7%]">Mahir</th></tr>
                                                 </thead>
                                                 <tbody>
                                                     {formData.instrumenFormatifAspek.split('\n').filter(a => a.trim() !== '').map((aspek, i) => (
-                                                        <tr key={i}><td className="border border-black p-3">{aspek}</td><td className="border border-black p-3"></td><td className="border border-black p-3"></td><td className="border border-black p-3"></td><td className="border border-black p-3"></td></tr>
+                                                        <tr key={i}><td className="border border-black p-2.5">{aspek}</td><td className="border border-black p-2.5"></td><td className="border border-black p-2.5"></td><td className="border border-black p-2.5"></td><td className="border border-black p-2.5"></td></tr>
                                                     ))}
                                                 </tbody>
                                             </table>
-                                            <div className="border border-black p-4 bg-slate-50">
-                                                <p className="font-bold mb-1.5 text-[12px]">Keterangan / Legend Penilaian:</p>
-                                                <ul className="list-disc ml-5 space-y-1 text-[11px]">
-                                                    {formData.instrumenFormatifLegend.split('\n').filter(l => l.trim() !== '').map((leg, idx) => <li key={idx}>{leg}</li>)}
-                                                </ul>
+                                            <div className="border border-black p-3 bg-slate-50 text-[11px] leading-relaxed">
+                                                <p className="font-bold mb-1">Keterangan Standar Kriteria:</p>
+                                                <div className="whitespace-pre-line">{formData.instrumenFormatifLegend}</div>
                                             </div>
                                         </div>
                                         <div className="page-break-inside-avoid">
-                                            <div className="font-bold bg-slate-100 p-1.5 mb-3 uppercase border border-slate-300">3. INSTRUMEN SUMATIF</div>
-                                            <div className="border border-black p-5 whitespace-pre-line">{formData.instrumenSumatif}</div>
+                                            <div className="font-bold bg-slate-100 p-1.5 mb-2 uppercase border border-slate-300 text-[12px]">3. STRUKTUR TAGIHAN SUMATIF AKHIR KINERJA</div>
+                                            <div className="border border-black p-4 whitespace-pre-line text-[12px] bg-slate-50/50">{formData.instrumenSumatif}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -806,7 +876,7 @@
                         )}
                     </main>
 
-                    {/* Floating Author Signature */}
+                    {/* FLOATING AUTHOR SIGNATURE (senada tema Premium UI & no-print) */}
                     <div className="fixed bottom-6 right-6 z-50 no-print group">
                         <div className="bg-[#0b111d]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex flex-col gap-2.5 shadow-[0_10px_40px_rgba(0,0,0,0.8)] hover:border-white/20 hover:-translate-y-1 transition-all duration-300">
                             <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold px-1 group-hover:text-brand-400 transition-colors">Crafted By</div>
