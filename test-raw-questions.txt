@@ -1,0 +1,32 @@
+1. Perhatikan pernyataan berikut!
+Sebuah benda bergerak dengan kecepatan tetap pada lintasan lurus.
+Konsep gerak yang sesuai dengan peristiwa tersebut adalah ...
+A. Gerak lurus beraturan
+B. Gerak lurus berubah beraturan
+C. Gerak melingkar
+D. Gerak parabola
+Kunci: A
+Level: C2
+Indikator: Peserta didik mampu mengidentifikasi konsep gerak lurus beraturan.
+Pembahasan: Gerak lurus beraturan (GLB) terjadi ketika benda bergerak dengan kecepatan tetap pada lintasan lurus, sehingga tidak ada percepatan.
+
+2. Hukum Newton I menyatakan bahwa ...
+A. Setiap benda akan terus bergerak lurus atau tetap diam, kecuali ada gaya yang bekerja padanya
+B. Percepatan suatu benda berbanding terbalik dengan massanya
+C. Setiap aksi selalu ada reaksi yang sama besar dan berlawanan arah
+D. Gaya gesek selalu berlawanan dengan arah gerak benda
+Kunci: A
+Level: C1
+Indikator: Peserta didik mampu menyebutkan bunyi Hukum Newton I.
+Pembahasan: Hukum Newton I atau hukum kelembaman menyatakan bahwa benda cenderung mempertahankan keadaannya (diam tetap diam, bergerak tetap bergerak) jika resultan gaya yang bekerja adalah nol.
+
+3. Sebuah balok bermassa 5 kg dikenai gaya sebesar 20 N. Tentukan percepatan balok tersebut!
+A. 2 m/s²
+B. 4 m/s²
+C. 5 m/s²
+D. 10 m/s²
+Kunci: B
+Level: C3
+Indikator: Peserta didik mampu menghitung percepatan benda menggunakan Hukum Newton II.
+Materi: Hukum Newton dan Dinamika Gerak
+Pembahasan: Berdasarkan Hukum Newton II, F = m × a, sehingga a = F/m = 20/5 = 4 m/s².

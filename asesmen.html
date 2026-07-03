@@ -377,6 +377,13 @@
             const [importStatus, setImportStatus] = useState({ type: null, message: "" });
             const [importedDraft, setImportedDraft] = useState(null);
 
+            // --- MVP 6: Question Bank Parser State ---
+            const [rawQuestionInput, setRawQuestionInput] = useState("");
+            const [parsedQuestions, setParsedQuestions] = useState([]);
+            const [parseStatus, setParseStatus] = useState({ type: null, message: "" });
+            const [bankSoalQuestions, setBankSoalQuestions] = useState([]);
+            const [editingQuestionIdx, setEditingQuestionIdx] = useState(null);
+
             const [formData, setFormData] = useState({
                 sekolah: "SMP Negeri 2 Karangtengah",
                 guru: "Purwa Umbara, S.Pd.",
@@ -404,15 +411,212 @@
                 catatanUmum: "Instrumen asesmen ini dirancang berbasis prinsip Deep Learning dan pedoman asesmen Kurikulum Merdeka BSKAP No. 046/H/KR/2026."
             });
 
-            const generateUUID = () => {
-                if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-                    return crypto.randomUUID();
-                }
-                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                    const r = Math.random() * 16 | 0;
-                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-                    return v.toString(16);
+            // --- BROWSER-COMPATIBLE PARSER ADAPTER ---
+            // NOTE: This adapter mirrors the logic of src/engines/questionParserEngine.js.
+            // It is inlined here because asesmen.html is a static browser file without a build system.
+            // Replace this with a proper module import when migrating to a build-system (e.g. Vite).
+            const parseQuestionsFromText = (rawText) => {
+                if (!rawText || typeof rawText !== 'string') return [];
+                const normalizedText = rawText.replace(/\r\n/g, '\n').trim();
+                if (!normalizedText) return [];
+
+                const blockRegex = /(?:^|\n)(?=\d+[\.\)]\s+)/;
+                const rawBlocks = normalizedText.split(blockRegex).map(b => b.trim()).filter(Boolean);
+                const results = [];
+
+                rawBlocks.forEach((block, idx) => {
+                    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+                    if (lines.length === 0) return;
+
+                    let number = idx + 1;
+                    const firstLine = lines[0];
+                    const numMatch = firstLine.match(/^(\d+)[\.\)]\s*(.*)/);
+
+                    let preOptionLines = [];
+                    if (numMatch) {
+                        number = parseInt(numMatch[1], 10);
+                        if (numMatch[2]) preOptionLines.push(numMatch[2]);
+                    } else {
+                        preOptionLines.push(firstLine);
+                    }
+
+                    const optionsList = [];
+                    let correctAnswer = "";
+                    let indicator = "";
+                    let cognitiveLevel = "";
+                    let topic = "";
+                    let explanation = "";
+                    let score = 1;
+                    let currentSection = "pre";
+                    let currentOptionIndex = -1;
+
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i];
+
+                        const keyMatch = line.match(/^(?:Kunci(?: Jawaban)?|Jawaban)\s*:\s*(.*)/i);
+                        if (keyMatch) {
+                            const rawKey = keyMatch[1].trim();
+                            const letterMatch = rawKey.match(/^([A-E])(?:\.|\)|\s|$)/i);
+                            correctAnswer = letterMatch ? letterMatch[1].toUpperCase() : rawKey.toUpperCase();
+                            currentSection = "meta"; continue;
+                        }
+                        const indMatch = line.match(/^Indikator(?: Soal)?\s*:\s*(.*)/i);
+                        if (indMatch) { indicator = indMatch[1].trim(); currentSection = "meta"; continue; }
+
+                        const levelMatch = line.match(/^(?:Level(?: Kognitif)?|Bloom|Ranah)\s*:\s*(.*)/i);
+                        if (levelMatch) { cognitiveLevel = levelMatch[1].trim(); currentSection = "meta"; continue; }
+
+                        const topicMatch = line.match(/^(?:Materi|Topik|Lingkup Materi)\s*:\s*(.*)/i);
+                        if (topicMatch) { topic = topicMatch[1].trim(); currentSection = "meta"; continue; }
+
+                        const pembMatch = line.match(/^(?:Pembahasan|Penjelasan|Keterangan)\s*:\s*(.*)/i);
+                        if (pembMatch) { explanation = pembMatch[1].trim(); currentSection = "meta"; continue; }
+
+                        const scoreMatch = line.match(/^(?:Skor|Bobot|Poin)\s*:\s*(.*)/i);
+                        if (scoreMatch) { const n = parseFloat(scoreMatch[1]); if (!isNaN(n) && n > 0) score = n; currentSection = "meta"; continue; }
+
+                        const optMatch = line.match(/^([A-Ea-e])[\.\)]\s+(.*)/);
+                        if (optMatch) {
+                            currentSection = "option";
+                            optionsList.push({ key: optMatch[1].toUpperCase(), text: optMatch[2].trim() });
+                            currentOptionIndex = optionsList.length - 1;
+                            continue;
+                        }
+
+                        if (currentSection === "option" && currentOptionIndex >= 0) {
+                            optionsList[currentOptionIndex].text += " " + line;
+                        } else if (currentSection === "pre") {
+                            preOptionLines.push(line);
+                        }
+                    }
+
+                    let stimulus = "";
+                    let questionText = "";
+                    if (preOptionLines.length === 1) {
+                        questionText = preOptionLines[0];
+                    } else if (preOptionLines.length > 1) {
+                        questionText = preOptionLines[preOptionLines.length - 1];
+                        stimulus = preOptionLines.slice(0, preOptionLines.length - 1).join('\n');
+                    }
+
+                    results.push({
+                        id: generateUUID(),
+                        number,
+                        type: "pilihan_ganda",
+                        stimulus,
+                        questionText,
+                        options: optionsList,
+                        answerKey: correctAnswer,
+                        correctAnswer,
+                        cognitiveLevel,
+                        indicator,
+                        material: topic,
+                        score,
+                        explanation,
+                        validationStatus: "DRAFT",
+                        validationErrors: [],
+                        validationWarnings: []
+                    });
                 });
+
+                return results;
+            };
+
+            // --- BROWSER-COMPATIBLE VALIDATOR ADAPTER ---
+            // NOTE: Mirrors src/engines/questionValidatorEngine.js — inline for static browser use.
+            const validateParsedQuestion = (q) => {
+                const errors = [];
+                const warnings = [];
+                if (!q.questionText || !q.questionText.trim()) errors.push("Teks soal tidak boleh kosong.");
+                if (!Array.isArray(q.options) || q.options.length < 4) errors.push("Soal pilihan ganda harus memiliki minimal 4 opsi.");
+                if (!q.answerKey || !q.answerKey.trim()) {
+                    errors.push("Kunci jawaban wajib diisi.");
+                } else if (Array.isArray(q.options) && q.options.length > 0) {
+                    const keys = q.options.map(o => (o.key || "").toUpperCase());
+                    if (!keys.includes(q.answerKey.toUpperCase())) errors.push(`Kunci jawaban '${q.answerKey}' tidak ditemukan di opsi (${keys.join(", ")}).`);
+                }
+                const validLevels = ["C1", "C2", "C3", "C4", "C5", "C6"];
+                const lvl = (q.cognitiveLevel || "").trim().toUpperCase().substring(0, 2);
+                if (!lvl || !validLevels.includes(lvl)) warnings.push(`Level kognitif '${q.cognitiveLevel || "kosong"}' bukan C1-C6.`);
+                if (!q.indicator || !q.indicator.trim()) warnings.push("Indikator soal sebaiknya diisi.");
+                const status = errors.length > 0 ? "ERROR" : (warnings.length > 0 ? "WARNING" : "VALID");
+                return { ...q, validationStatus: status, validationErrors: errors, validationWarnings: warnings };
+            };
+
+            // --- MVP 6: Parser Event Handlers ---
+            const handleParseQuestions = () => {
+                const text = rawQuestionInput.trim();
+                if (!text) {
+                    setParseStatus({ type: "error", message: "Input teks soal tidak boleh kosong." });
+                    return;
+                }
+                const results = parseQuestionsFromText(text);
+                if (results.length === 0) {
+                    setParseStatus({ type: "error", message: "Tidak ada soal yang berhasil diparsing. Pastikan format soal sesuai (nomor. teks soal, A. opsi, ..., Kunci: X)." });
+                    return;
+                }
+                setParsedQuestions(results);
+                setParseStatus({ type: "success", message: `${results.length} soal berhasil diparsing. Klik 'Validasi Soal' untuk memeriksa kualitas soal.` });
+                setEditingQuestionIdx(null);
+            };
+
+            const handleValidateQuestions = () => {
+                if (parsedQuestions.length === 0) {
+                    setParseStatus({ type: "error", message: "Belum ada soal yang diparsing. Klik 'Parse Soal' terlebih dahulu." });
+                    return;
+                }
+                const allTexts = parsedQuestions.map(q => q.questionText);
+                const validated = parsedQuestions.map((q, idx) => {
+                    const result = validateParsedQuestion(q);
+                    const isDuplicate = allTexts.indexOf(q.questionText) !== idx;
+                    if (isDuplicate) result.validationWarnings.push("Teks soal duplikat ditemukan.");
+                    return result;
+                });
+                setParsedQuestions(validated);
+                const valid = validated.filter(q => q.validationStatus === "VALID").length;
+                const warn = validated.filter(q => q.validationStatus === "WARNING").length;
+                const err = validated.filter(q => q.validationStatus === "ERROR").length;
+                setParseStatus({ type: err > 0 ? "warning" : "success", message: `Validasi selesai: ${valid} VALID, ${warn} WARNING, ${err} ERROR.` });
+            };
+
+            const handleAddToBank = () => {
+                if (parsedQuestions.length === 0) {
+                    setParseStatus({ type: "error", message: "Belum ada soal untuk ditambahkan. Parse dan validasi soal terlebih dahulu." });
+                    return;
+                }
+                const toAdd = parsedQuestions.filter(q => q.validationStatus !== "ERROR");
+                const skipped = parsedQuestions.length - toAdd.length;
+                if (toAdd.length === 0) {
+                    setParseStatus({ type: "error", message: "Semua soal memiliki error. Perbaiki soal terlebih dahulu sebelum menambahkan ke bank soal." });
+                    return;
+                }
+                const renumbered = toAdd.map((q, idx) => ({ ...q, number: bankSoalQuestions.length + idx + 1 }));
+                setBankSoalQuestions(prev => [...prev, ...renumbered]);
+                setParseStatus({ type: "success", message: `${toAdd.length} soal berhasil ditambahkan ke bank soal.${skipped > 0 ? ` ${skipped} soal dilewati karena masih error.` : ""}` });
+                setParsedQuestions([]);
+                setRawQuestionInput("");
+            };
+
+            const handleClearParser = () => {
+                setRawQuestionInput("");
+                setParsedQuestions([]);
+                setParseStatus({ type: null, message: "" });
+                setEditingQuestionIdx(null);
+            };
+
+            const handleRemoveParsed = (idx) => {
+                setParsedQuestions(prev => prev.filter((_, i) => i !== idx));
+            };
+
+            const handleRemoveFromBank = (idx) => {
+                setBankSoalQuestions(prev => {
+                    const updated = prev.filter((_, i) => i !== idx);
+                    return updated.map((q, i) => ({ ...q, number: i + 1 }));
+                });
+            };
+
+            const handleEditParsedField = (idx, field, value) => {
+                setParsedQuestions(prev => prev.map((q, i) => i === idx ? { ...q, [field]: value } : q));
             };
 
             // Update Mapel options when Fase changes
@@ -912,7 +1116,25 @@
                         weight: Number(String(item.weight || item.bobot || "20").replace(/[^0-9]/g, "")) || 20,
                         estimatedQuestionCount: item.estimatedQuestionCount || (String(item.questionType || item.bentuk).toLowerCase().includes("uraian") ? 1 : 2)
                     })),
-                    questions: importedDraft ? [] : [
+                    questions: bankSoalQuestions.length > 0
+                        ? bankSoalQuestions.map(q => ({
+                            questionId: q.id || generateUUID(),
+                            number: q.number,
+                            type: "Pilihan Ganda",
+                            stimulus: q.stimulus || "",
+                            questionText: q.questionText || "",
+                            options: q.options.reduce((acc, o) => { acc[o.key] = o.text; return acc; }, {}),
+                            correctAnswer: q.answerKey || "",
+                            cognitiveLevel: (q.cognitiveLevel || "").substring(0, 2).toUpperCase() || undefined,
+                            indicator: q.indicator || "",
+                            topic: q.material || metaTopic,
+                            subject: metaSubject,
+                            grade: metaGrade,
+                            score: q.score || 1,
+                            explanation: q.explanation || "",
+                            validationStatus: q.validationStatus
+                          }))
+                        : importedDraft ? [] : [
                         ...formData.soalPG.map(q => ({
                             questionId: generateUUID(),
                             number: q.no,
@@ -933,7 +1155,9 @@
                             cognitiveLevel: q.level || "C5"
                         }))
                     ],
-                    answerKey: importedDraft ? [] : [
+                    answerKey: bankSoalQuestions.length > 0
+                        ? bankSoalQuestions.map(q => ({ number: q.number, answer: q.answerKey, explanation: q.explanation || "" }))
+                        : importedDraft ? [] : [
                         ...formData.soalPG.map(q => ({
                             number: q.no,
                             answer: q.kunci,
@@ -951,13 +1175,15 @@
                         rubrics: formData.rubrikSikap || []
                     },
                     imageAssets: [],
-                    validationReport: importedDraft && importedDraft.validationReport ? {
-                        ...importedDraft.validationReport,
-                        status: "VALIDATED",
-                        isValidated: true
-                    } : {
+                    validationReport: {
+                        ...(importedDraft && importedDraft.validationReport ? importedDraft.validationReport : {}),
                         status: "VALIDATED",
                         isValidated: true,
+                        bloomDistribution: bankSoalQuestions.reduce((acc, q) => {
+                            const lvl = (q.cognitiveLevel || "unknown").substring(0, 2).toUpperCase();
+                            acc[lvl] = (acc[lvl] || 0) + 1;
+                            return acc;
+                        }, {}),
                         warnings: []
                     },
                     exportTargets: ["JSON"],
@@ -1302,6 +1528,235 @@
                                     <ButtonSecondary onClick={() => setStep(2)}>Kembali</ButtonSecondary>
                                     <ButtonPrimary onClick={() => setStep(4)} icon="arrow-right">Lanjut ke Rubrik Sikap</ButtonPrimary>
                                 </div>
+
+                                {/* === BANK SOAL & PARSER SOAL (MVP 6) === */}
+                                <div className="mt-8 pt-8 border-t-2 border-dashed border-brand-500/30 space-y-6">
+                                    <div className="border-b border-white/10 pb-5">
+                                        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
+                                            <i data-lucide="scan-text" className="w-6 h-6 text-violet-400"></i>
+                                            <span>Bank Soal &amp; Parser Soal</span>
+                                            <span className="ml-2 text-xs font-semibold bg-violet-500/20 text-violet-300 border border-violet-500/30 px-2 py-0.5 rounded-lg">MVP 6</span>
+                                        </h2>
+                                        <p className="text-sm text-slate-400 mt-1">
+                                            Tempel soal dari AI, dokumen manual, atau bank soal lama. Sistem akan mencoba mengubahnya menjadi format soal terstruktur untuk divalidasi dan diedit.
+                                        </p>
+                                    </div>
+
+                                    {/* RAW INPUT AREA */}
+                                    <div className="space-y-3">
+                                        <label className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                                            <i data-lucide="clipboard-paste" className="w-4 h-4 text-violet-400"></i>
+                                            <span>Tempel Teks Soal Mentah</span>
+                                        </label>
+                                        <textarea
+                                            value={rawQuestionInput}
+                                            onChange={e => setRawQuestionInput(e.target.value)}
+                                            rows={10}
+                                            placeholder={`Contoh format yang didukung:\n\n1. Perhatikan pernyataan berikut!\nSebuah benda bergerak dengan kecepatan tetap pada lintasan lurus.\nPertanyaan: Konsep gerak yang sesuai adalah ...\nA. Gerak lurus beraturan\nB. Gerak lurus berubah beraturan\nC. Gerak melingkar\nD. Gerak parabola\nKunci: A\nLevel: C2\nIndikator: Peserta didik mampu mengidentifikasi GLB.\nPembahasan: GLB terjadi ketika benda bergerak dengan kecepatan tetap.`}
+                                            className="w-full p-4 rounded-2xl outline-none leading-relaxed resize-y font-mono text-sm min-h-[200px] bg-slate-900/70 border border-violet-500/20 focus:border-violet-500 text-slate-200"
+                                        />
+                                        <div className="flex flex-wrap gap-2">
+                                            <button
+                                                onClick={handleParseQuestions}
+                                                className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-violet-600/30 transition-all"
+                                            >
+                                                <i data-lucide="cpu" className="w-4 h-4"></i>
+                                                <span>Parse Soal</span>
+                                            </button>
+                                            <button
+                                                onClick={handleValidateQuestions}
+                                                disabled={parsedQuestions.length === 0}
+                                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${parsedQuestions.length === 0 ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-600/20'}`}
+                                            >
+                                                <i data-lucide="shield-check" className="w-4 h-4"></i>
+                                                <span>Validasi Soal</span>
+                                            </button>
+                                            <button
+                                                onClick={handleAddToBank}
+                                                disabled={parsedQuestions.filter(q => q.validationStatus !== 'ERROR').length === 0}
+                                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${parsedQuestions.filter(q => q.validationStatus !== 'ERROR').length === 0 ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20'}`}
+                                            >
+                                                <i data-lucide="library-add" className="w-4 h-4"></i>
+                                                <span>Tambah ke Bank Soal</span>
+                                            </button>
+                                            <button
+                                                onClick={handleClearParser}
+                                                className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-slate-300 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border border-white/10"
+                                            >
+                                                <i data-lucide="trash-2" className="w-4 h-4"></i>
+                                                <span>Bersihkan Input</span>
+                                            </button>
+                                        </div>
+
+                                        {/* Parse / Validate Status */}
+                                        {parseStatus.message && (
+                                            <div className={`p-3 rounded-xl text-xs font-medium flex items-start gap-2.5 ${
+                                                parseStatus.type === 'error' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                                : parseStatus.type === 'warning' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                            }`}>
+                                                <i data-lucide={parseStatus.type === 'error' ? 'alert-circle' : parseStatus.type === 'warning' ? 'alert-triangle' : 'check-circle'} className="w-4 h-4 shrink-0 mt-0.5"></i>
+                                                <span>{parseStatus.message}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* PARSED QUESTION REVIEW LIST */}
+                                    {parsedQuestions.length > 0 && (
+                                        <div className="space-y-3">
+                                            <h3 className="text-sm font-bold text-white flex items-center gap-2 border-l-4 border-violet-400 pl-3">
+                                                <span>Hasil Parsing ({parsedQuestions.length} soal) — Review &amp; Edit</span>
+                                            </h3>
+                                            <div className="space-y-3">
+                                                {parsedQuestions.map((q, idx) => {
+                                                    const statusColors = {
+                                                        DRAFT:   'border-slate-500/30 bg-slate-900/50',
+                                                        VALID:   'border-emerald-500/40 bg-emerald-950/30',
+                                                        WARNING: 'border-amber-500/40 bg-amber-950/30',
+                                                        ERROR:   'border-rose-500/40 bg-rose-950/30'
+                                                    };
+                                                    const badgeColors = {
+                                                        DRAFT:   'bg-slate-700 text-slate-300',
+                                                        VALID:   'bg-emerald-600/80 text-white',
+                                                        WARNING: 'bg-amber-600/80 text-white',
+                                                        ERROR:   'bg-rose-600/80 text-white'
+                                                    };
+                                                    const isEditing = editingQuestionIdx === idx;
+                                                    return (
+                                                        <div key={q.id || idx} className={`rounded-2xl border p-4 space-y-3 transition-all ${statusColors[q.validationStatus] || statusColors.DRAFT}`}>
+                                                            <div className="flex items-center justify-between flex-wrap gap-2">
+                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                    <span className="font-bold text-white text-xs bg-violet-600/70 px-2.5 py-1 rounded-lg">#{q.number}</span>
+                                                                    <span className={`text-xs font-bold px-2 py-1 rounded-lg ${badgeColors[q.validationStatus] || badgeColors.DRAFT}`}>{q.validationStatus}</span>
+                                                                    {q.answerKey && <span className="text-xs bg-slate-800 border border-white/10 px-2 py-1 rounded-lg text-emerald-300 font-mono">Kunci: {q.answerKey}</span>}
+                                                                    {q.cognitiveLevel && <span className="text-xs bg-slate-800 border border-white/10 px-2 py-1 rounded-lg text-brand-300">{q.cognitiveLevel}</span>}
+                                                                    <span className="text-xs text-slate-500">PG</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <button
+                                                                        onClick={() => setEditingQuestionIdx(isEditing ? null : idx)}
+                                                                        className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg transition-all border border-white/10"
+                                                                    >
+                                                                        {isEditing ? 'Tutup Edit' : 'Edit'}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleRemoveParsed(idx)}
+                                                                        className="text-xs bg-rose-900/60 hover:bg-rose-700/80 text-rose-300 px-3 py-1.5 rounded-lg transition-all border border-rose-500/20"
+                                                                    >
+                                                                        Hapus
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+
+                                                            {isEditing ? (
+                                                                <div className="space-y-2 pt-1">
+                                                                    <div>
+                                                                        <label className="text-xs text-slate-400 font-semibold block mb-1">Teks Soal</label>
+                                                                        <textarea
+                                                                            value={q.questionText}
+                                                                            onChange={e => handleEditParsedField(idx, 'questionText', e.target.value)}
+                                                                            rows={3}
+                                                                            className="w-full p-2 rounded-xl text-sm text-slate-200 bg-slate-900/80 border border-white/10 resize-y outline-none"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="grid grid-cols-2 gap-2">
+                                                                        <div>
+                                                                            <label className="text-xs text-slate-400 font-semibold block mb-1">Kunci Jawaban</label>
+                                                                            <input type="text" value={q.answerKey} onChange={e => handleEditParsedField(idx, 'answerKey', e.target.value.toUpperCase())} className="w-full p-2 rounded-xl text-sm text-emerald-300 bg-slate-900/80 border border-white/10 outline-none" placeholder="A / B / C / D" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <label className="text-xs text-slate-400 font-semibold block mb-1">Level Kognitif</label>
+                                                                            <input type="text" value={q.cognitiveLevel} onChange={e => handleEditParsedField(idx, 'cognitiveLevel', e.target.value)} className="w-full p-2 rounded-xl text-sm text-brand-300 bg-slate-900/80 border border-white/10 outline-none" placeholder="C1-C6" />
+                                                                        </div>
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="text-xs text-slate-400 font-semibold block mb-1">Indikator</label>
+                                                                        <input type="text" value={q.indicator} onChange={e => handleEditParsedField(idx, 'indicator', e.target.value)} className="w-full p-2 rounded-xl text-sm text-slate-200 bg-slate-900/80 border border-white/10 outline-none" placeholder="Indikator soal..." />
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="space-y-2">
+                                                                    {q.stimulus && <p className="text-xs text-slate-400 italic border-l-2 border-slate-600 pl-2">{q.stimulus}</p>}
+                                                                    <p className="text-sm text-slate-200 leading-relaxed">{q.questionText || <span className="text-rose-400 italic">Teks soal kosong</span>}</p>
+                                                                    <div className="grid grid-cols-2 gap-1.5">
+                                                                        {q.options.map((opt, oi) => (
+                                                                            <div key={oi} className={`text-xs px-2.5 py-1.5 rounded-lg font-medium ${
+                                                                                opt.key === q.answerKey
+                                                                                    ? 'bg-emerald-900/40 border border-emerald-500/30 text-emerald-300'
+                                                                                    : 'bg-slate-800/50 border border-white/5 text-slate-300'
+                                                                            }`}>{opt.key}. {opt.text}</div>
+                                                                        ))}
+                                                                    </div>
+                                                                    {(q.validationErrors.length > 0 || q.validationWarnings.length > 0) && (
+                                                                        <div className="text-xs space-y-1 pt-1">
+                                                                            {q.validationErrors.map((e, ei) => <div key={ei} className="text-rose-400 flex items-start gap-1"><i data-lucide="x-circle" className="w-3.5 h-3.5 mt-0.5 shrink-0"></i>{e}</div>)}
+                                                                            {q.validationWarnings.map((w, wi) => <div key={wi} className="text-amber-400 flex items-start gap-1"><i data-lucide="alert-triangle" className="w-3.5 h-3.5 mt-0.5 shrink-0"></i>{w}</div>)}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* BANK SOAL DISPLAY */}
+                                    {bankSoalQuestions.length > 0 && (
+                                        <div className="space-y-3 pt-4 border-t border-white/10">
+                                            <h3 className="text-sm font-bold text-white flex items-center gap-2 border-l-4 border-emerald-400 pl-3">
+                                                <i data-lucide="database" className="w-4 h-4 text-emerald-400"></i>
+                                                <span>Bank Soal Tervalidasi ({bankSoalQuestions.length} soal)</span>
+                                            </h3>
+                                            <div className="overflow-x-auto rounded-2xl border border-white/10">
+                                                <table className="w-full text-xs">
+                                                    <thead>
+                                                        <tr className="bg-slate-800/80 text-slate-400 font-bold text-left">
+                                                            <th className="p-3 w-12">#</th>
+                                                            <th className="p-3">Teks Soal</th>
+                                                            <th className="p-3 w-20">Kunci</th>
+                                                            <th className="p-3 w-16">Level</th>
+                                                            <th className="p-3 w-24">Status</th>
+                                                            <th className="p-3 w-16">Aksi</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-white/5">
+                                                        {bankSoalQuestions.map((q, idx) => (
+                                                            <tr key={q.id || idx} className="hover:bg-white/5 transition-colors">
+                                                                <td className="p-3 font-bold text-violet-300">{q.number}</td>
+                                                                <td className="p-3 text-slate-200 max-w-xs">
+                                                                    <div className="line-clamp-2">{q.questionText}</div>
+                                                                </td>
+                                                                <td className="p-3 font-mono font-bold text-emerald-300">{q.answerKey}</td>
+                                                                <td className="p-3">
+                                                                    <span className="bg-brand-500/20 text-brand-300 px-2 py-0.5 rounded font-semibold border border-brand-500/30">{q.cognitiveLevel || "—"}</span>
+                                                                </td>
+                                                                <td className="p-3">
+                                                                    <span className={`px-2 py-0.5 rounded font-bold ${
+                                                                        q.validationStatus === 'VALID' ? 'bg-emerald-600/80 text-white'
+                                                                        : 'bg-amber-600/80 text-white'
+                                                                    }`}>{q.validationStatus}</span>
+                                                                </td>
+                                                                <td className="p-3">
+                                                                    <button
+                                                                        onClick={() => handleRemoveFromBank(idx)}
+                                                                        className="text-rose-400 hover:text-rose-300 transition-colors"
+                                                                        title="Hapus dari bank soal"
+                                                                    >
+                                                                        <i data-lucide="trash-2" className="w-4 h-4"></i>
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                {/* === END BANK SOAL & PARSER SOAL === */}
+
                             </div>
                         )}
 

@@ -1,0 +1,17 @@
+1. Soal pilihan ganda dengan kunci jawaban yang HILANG
+A. Opsi A
+B. Opsi B
+C. Opsi C
+D. Opsi D
+
+2. Soal dengan opsi TIDAK LENGKAP (hanya 2 opsi)
+A. Opsi A
+B. Opsi B
+Kunci: A
+
+3. Soal dengan kunci jawaban TIDAK ADA DI OPSI
+A. Opsi A
+B. Opsi B
+C. Opsi C
+D. Opsi D
+Kunci: E
