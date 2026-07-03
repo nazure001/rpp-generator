@@ -19,81 +19,80 @@ Setiap tahap dirancang dengan prinsip **Zero-Breakage Guarantee**, di mana fitur
 
 ### MVP 1: Documentation Foundation
 * **Tujuan**: Menyusun fondasi dokumentasi arsitektur, peta jalan, alur data, dan aturan pengembangan sistem.
-* **Status**: **IN PROGRESS (Sedang Berjalan)**
+* **Status**: **COMPLETED (Selesai)**
 * **Deliverables**:
-  * `docs/ARCHITECTURE.md`: Spesifikasi arsitektur 8 komponen inti ekosistem.
+  * `docs/ARCHITECTURE.md`: Spesifikasi arsitektur target ekosistem.
   * `docs/ROADMAP.md`: Peta jalan pengembangan bertahap ini.
   * `docs/DATA_FLOW.md`: Spesifikasi alur data dan transformasi entitas.
   * `docs/AGENT_RULES.md`: Aturan penulisan kode aman dan pedoman kontribusi.
-  * `SCHEMA_ASSESSMENTHUB.md`: Draf antarmuka skema TypeScript untuk 5 entitas utama.
 
-### MVP 2: Modularize Existing Engine (Zero-Build Refactoring)
-* **Tujuan**: Memisahkan logika monolitik pada file HTML menjadi berkas skrip modular tanpa memerlukan NodeJS/Webpack.
-* **Target Rilis**: *Fase Berikutnya*
+### MVP 2: Zero-Build Modularization (Refactoring Preparation)
+* **Tujuan**: Memisahkan logika data dan mesin dari file HTML menjadi berkas skrip modular terisolasi.
+* **Status**: **COMPLETED (Selesai - Ekstraksi Referensi)**
 * **Deliverables**:
-  * Ekstraksi database kurikulum ke `data/curriculum_bskap.js` (BSKAP 2026 & PMM).
-  * Ekstraksi utilitas dan smart engine RPP ke `js/rpp_engine.js`.
-  * Pembaruan tag `<script>` pada `index.html` dengan jaminan fungsi lama berjalan 100% normal.
+  * Ekstraksi database kurikulum ke `src/engines/curriculumEngine.js`.
+  * Ekstraksi indikator PMM ke `src/engines/pmmEngine.js`.
+  * Ekstraksi model pembelajaran ke `src/engines/learningModelEngine.js`.
+  * Ekstraksi logika kalkulasi ke `src/engines/planningEngine.js`.
+  * Pembuatan `src/legacy/README.md` sebagai penjelasan transisi tanpa merubah perilaku produksi `index.html`.
 
-### MVP 3: JSON Schemas & State Standardization
-* **Tujuan**: Mengimplementasikan antarmuka skema data di sisi klien untuk memastikan interoperabilitas antar modul.
+### MVP 3: JSON Schemas Standardization
+* **Tujuan**: Mengimplementasikan antarmuka skema data standar untuk interoperabilitas antar modul.
+* **Status**: **COMPLETED (Selesai)**
 * **Deliverables**:
-  * Implementasi konstruktor skema JS di `js/schema_models.js` (`CurriculumProfile`, `AssessmentBlueprint`, `QuestionBankSchema`, `ObservationRubricSchema`, `StudentAnalyticsSchema`).
-  * Standarisasi format penyimpanan sesi di `localStorage` dan mekanisme validasi skema JSON.
+  * `src/schemas/lessonPlan.schema.json`: Standar data RPP.
+  * `src/schemas/assessment.schema.json`: Standar data paket asesmen.
+  * `src/schemas/question.schema.json`: Standar data butir soal.
+  * `src/schemas/export.schema.json`: Standar data output ke sistem eksternal.
 
 ### MVP 4: Export RPP Planning Data
-* **Tujuan**: Membangun jembatan data dari aplikasi RPP Generator (`index.html`) menuju modul asesmen.
+* **Tujuan**: Membangun jembatan data dari aplikasi RPP Generator (`index.html`) menuju format JSON standar.
+* **Status**: **COMPLETED (Selesai)**
 * **Deliverables**:
-  * Tombol dan fungsi **"Ekspor ke AssessmentHub"** pada Tahap 4 & 5 RPP Generator.
-  * Pembentukan muatan data sesi (`PlanningPayload`) yang dikirimkan melalui `localStorage` atau URL parameter yang aman.
+  * Fitur **"Export JSON RPP"** non-destruktif pada antarmuka Langkah 5 dan pratinjau cetak di `index.html`.
+  * Fitur **"Export Draft Asesmen"** untuk mengunduh draf awal paket asesmen.
 
 ### MVP 5: Assessment Blueprint Generator
 * **Tujuan**: Menghidupkan generator kisi-kisi soal dan instrumen asesmen interaktif berbasis peramban.
+* **Status**: **ROADMAP (Dalam Perencanaan) — Prototipe Eksperimental**
 * **Deliverables**:
-  * Integrasi penuh antarmuka `asesmen.html` dengan skema `AssessmentBlueprint` dan `QuestionBankSchema`.
-  * Fitur penyuntingan kisi-kisi secara *real-time* dan penghitungan otomatis bobot Taksonomi Bloom (C1–C6).
-  * Cetak matriks kisi-kisi dan soal berformat standar sekolah (A4 Print-Ready).
-
-### MVP 6: README & GAS Integration Plan
-* **Tujuan**: Menyempurnakan panduan pengguna dan mempersiapkan rancangan integrasi Google Apps Script (GAS).
-* **Deliverables**:
-  * Pembaruan `README.md` utama dengan dokumentasi arsitektur modular baru.
-  * Pembuatan cetak biru (*blueprint*) dan dokumentasi API endpoint untuk penghubung Google Apps Script (`docs/GAS_INTEGRATION_PLAN.md`).
+  * Berkas `asesmen.html` saat ini berstatus **Experimental Prototype** (belum dihubungkan ke alur ekspor JSON RPP maupun Google Form Builder).
+  * Fitur penyusunan kisi-kisi dan penghitungan bobot ranah kognitif akan diintegrasikan pada tahap berikutnya.
 
 ---
 
 ## 🚀 Fase Advanced (V2 – V6): AI Intelligence & Cloud Automation
 
-### V2: Question Parser
+### V2: Question Parser Module
 * **Tujuan**: Mengembangkan modul pembaca teks cerdas untuk mengonversi draf soal mentah menjadi JSON terstruktur.
-* **Fitur**:
-  * *Paste & Parse*: Guru dapat menyalin teks soal dari Word/PDF dan sistem otomatis memisahkan soal, opsi A–D, kunci, dan pembahasan.
-  * Klasifikasi otomatis level Bloom berdasarkan analisis Kata Kerja Operasional (KKO).
+* **Status**: **COMPLETED (Selesai — Standalone Prototype)**
+* **Deliverables**:
+  * Modul mandiri `src/engines/questionParserEngine.js` dengan fungsi `parseQuestionsFromText` *(belum dihubungkan ke UI)*.
+  * Berkas sampel uji `src/engines/questionParserEngine.test-samples.md`.
 
-### V3: Question Validator
+### V3: Question Validator Engine
 * **Tujuan**: Menyediakan sistem penjamin mutu soal sebelum didistribusikan kepada peserta didik.
-* **Fitur**:
-  * Pemeriksaan proporsi soal HOTS (C4–C6) terhadap LOTS/MOTS.
-  * Audit pemetaan soal terhadap Tujuan Pembelajaran (TP) pada kisi-kisi.
-  * Deteksi kalimat ambigu, pengecoh tidak homogen, dan bias pola kunci jawaban.
+* **Status**: **COMPLETED (Selesai — Standalone Prototype)**
+* **Deliverables**:
+  * Modul mandiri `src/engines/questionValidatorEngine.js` dengan fungsi `validateQuestion` dan `validateQuestionSet` *(belum dihubungkan ke UI)*.
 
 ### V4: Google Form Builder via GAS
-* **Tujuan**: Otomatisasi pembuatan instrumen ujian online di Google Forms langsung dari browser.
-* **Fitur**:
-  * Konversi 1-Klik dari `QuestionBankSchema` menjadi Google Form kuis bernilai.
-  * Penyisipan kunci jawaban, bobot nilai, dan pembahasan otomatis pada Form yang dihasilkan.
+* **Tujuan**: Otomatisasi pembuatan instrumen ujian online di Google Forms langsung dari browser via Google Apps Script (GAS).
+* **Status**: **ROADMAP (Dalam Perencanaan)**
+* **Deliverables**:
+  * Konversi paket soal JSON menjadi Google Form kuis bernilai beserta kunci jawaban dan pembahasan otomatis.
 
-### V5: Drive Organizer
+### V5: Drive Organizer via GAS
 * **Tujuan**: Pengelolaan portofolio administrasi guru di Google Drive secara otomatis dan rapi.
-* **Fitur**:
-  * Pembuatan pohon direktori otomatis berdasarkan Tahun Ajaran, Kelas, Mapel, dan Topik.
-  * Penyimpanan arsip RPP (PDF), Kisi-Kisi (JSON/PDF), dan Spreadsheet nilai pada folder yang bersesuaian.
+* **Status**: **ROADMAP (Dalam Perencanaan)**
+* **Deliverables**:
+  * Pembuatan pohon direktori otomatis dan pengarsipan berkas RPP, kisi-kisi, dan paket soal di Google Drive.
 
 ### V6: Evidence / Accreditation Mapper
 * **Tujuan**: Pemetaan otomatis dokumen asesmen untuk pemenuhan bukti dukung PMM dan akreditasi sekolah.
-* **Fitur**:
-  * Dasbor rekapitulasi bukti kinerja guru (sinkron dengan 8 Indikator Observasi PMM).
-  * Ekspor berkas portofolio komprehensif yang telah dipetakan ke instrumen akreditasi sekolah (BAN-PDM).
+* **Status**: **ROADMAP (Dalam Perencanaan)**
+* **Deliverables**:
+  * Pemetaan otomatis hasil asesmen dan dokumen pembelajaran ke dalam borang bukti akreditasi dan laporan PMM.
 
 ---
 
@@ -102,14 +101,13 @@ Setiap tahap dirancang dengan prinsip **Zero-Breakage Guarantee**, di mana fitur
 | Fase | Nama Fitur / Modul | Target Rilis | Status Saat Ini |
 | :--- | :--- | :--- | :--- |
 | **MVP 0** | Safety & Repository Audit | Q3 2026 | **COMPLETED** |
-| **MVP 1** | Documentation Foundation | Q3 2026 | **IN PROGRESS** |
-| **MVP 2** | Zero-Build Modularization | Q3 2026 | *Planned* |
-| **MVP 3** | JSON Schemas Implementation | Q3 2026 | *Planned* |
-| **MVP 4** | RPP Planning Data Export | Q3 2026 | *Planned* |
-| **MVP 5** | Blueprint & Question Generator | Q3 2026 | *Planned* |
-| **MVP 6** | README & GAS Blueprint | Q3 2026 | *Planned* |
-| **V2** | Question Parser Module | Q4 2026 | *Future Roadmap* |
-| **V3** | Question Validator Engine | Q4 2026 | *Future Roadmap* |
-| **V4** | 1-Click Google Form Builder | Q1 2027 | *Future Roadmap* |
-| **V5** | Automated Drive Organizer | Q1 2027 | *Future Roadmap* |
-| **V6** | Accreditation Evidence Mapper | Q2 2027 | *Future Roadmap* |
+| **MVP 1** | Documentation Foundation | Q3 2026 | **COMPLETED** |
+| **MVP 2** | Zero-Build Modularization | Q3 2026 | **COMPLETED (Reference Modules)** |
+| **MVP 3** | JSON Schemas Implementation | Q3 2026 | **COMPLETED** |
+| **MVP 4** | RPP Planning Data Export | Q3 2026 | **COMPLETED** |
+| **MVP 5** | Blueprint & Question Generator | Q4 2026 | **ROADMAP (Experimental Prototype)** |
+| **V2** | Question Parser Module | Q4 2026 | **COMPLETED (Standalone Prototype)** |
+| **V3** | Question Validator Engine | Q4 2026 | **COMPLETED (Standalone Prototype)** |
+| **V4** | Google Form Builder via GAS | Q1 2027 | **ROADMAP** |
+| **V5** | Automated Drive Organizer | Q1 2027 | **ROADMAP** |
+| **V6** | Accreditation Evidence Mapper | Q2 2027 | **ROADMAP** |

@@ -10,7 +10,7 @@ Saat ini, proyek ini sedang bertransisi dan berevolusi menuju ekosistem **Assess
 
 - **🟢 Produksi (Aktif & Stabil)**: Aplikasi generator RPP statis berbasis web (`index.html`) berfungsi penuh untuk merancang RPP 5 langkah, mendukung cetak A4 (*print-ready*), serta dilengkapi fitur ekspor data JSON (*Export JSON RPP* & *Export Draft Asesmen*).
 - **🟡 Fondasi Arsitektur (*MVP 1 - MVP 3*)**: Skema standar data (*JSON Schema*), dokumentasi arsitektur, dan ekstraksi modul mesin pembantu (*engines*) telah disiapkan di dalam repositori.
-- **🔵 Prototipe Mandiri (*V2 - V3*)**: Modul mandiri untuk *Question Parser* dan *Question Validator* telah dibangun dan lulus uji unit secara lokal, bersiap untuk diintegrasikan pada alur asesmen berikutnya.
+- **🔵 Prototipe Mandiri (*V2 - V3*)**: Parser and validator are available as standalone prototypes and require further integration testing.
 - **🟣 Dalam Perencanaan (*Roadmap / Planned*)**: Integrasi Google Form otomatis, organisasi Google Drive, dan pemetaan bukti akreditasi sedang dalam tahap rancangan jalan (*roadmap*).
 
 ---

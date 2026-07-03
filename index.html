@@ -492,18 +492,42 @@
                 setFormData(prev => ({...prev, troubleshooting: newArr}));
             };
 
+            const generateUUID = (prefix = "id") => {
+                if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                    return crypto.randomUUID();
+                }
+                return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+            };
+
+            const parseGradeSemester = (kelasText = "") => {
+                const str = String(kelasText).trim();
+                let semester = "";
+                if (/genap/i.test(str)) {
+                    semester = "Genap";
+                } else if (/ganjil|gasal/i.test(str)) {
+                    semester = "Ganjil";
+                }
+                const grade = str.replace(/\/?\s*(?:semester\s*)?(?:ganjil|gasal|genap)/gi, "").replace(/[\/\-]\s*$/, "").trim();
+                return { grade: grade || str, semester };
+            };
+
             const handleExportJSON = () => {
+                const nowIso = new Date().toISOString();
+                const gradeInfo = parseGradeSemester(formData.kelas || "");
                 const exportData = {
+                    lessonPlanId: generateUUID("lp"),
+                    createdAt: nowIso,
+                    updatedAt: nowIso,
                     appName: "Smart RPP Generator Pro",
                     exportType: "lesson_plan",
-                    exportedAt: new Date().toISOString(),
+                    exportedAt: nowIso,
                     school: formData.sekolah || "",
                     teacher: formData.guru || "",
                     principal: formData.kepalaSekolah || "",
                     subject: selectedMapel || formData.mapel || "",
-                    grade: formData.kelas || "",
+                    grade: gradeInfo.grade,
                     phase: selectedFase || "",
-                    semester: formData.kelas || "",
+                    semester: gradeInfo.semester,
                     topic: formData.topik || "",
                     curriculumElement: selectedElemen || "",
                     capaianPembelajaran: DATABASE_KURIKULUM[selectedFase]?.[selectedMapel]?.[selectedElemen] || "",
@@ -554,8 +578,9 @@
             const handleExportDraftAsesmen = () => {
                 const slugify = (str) => (str || "untitled").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
                 const dateStr = new Date().toISOString().split("T")[0];
+                const gradeInfo = parseGradeSemester(formData.kelas || "");
                 const draftData = {
-                    assessmentId: `asm-draft-${Date.now()}`,
+                    assessmentId: generateUUID("asm"),
                     source: {
                         type: "lesson_plan_export",
                         app: "Smart RPP Generator Pro"
@@ -564,9 +589,9 @@
                         school: formData.sekolah || "",
                         teacher: formData.guru || "",
                         subject: selectedMapel || formData.mapel || "",
-                        grade: formData.kelas || "",
+                        grade: gradeInfo.grade,
                         phase: selectedFase || "",
-                        semester: formData.kelas || "",
+                        semester: gradeInfo.semester,
                         topic: formData.topik || "",
                         curriculumElement: selectedElemen || "",
                         academicYear: ""
