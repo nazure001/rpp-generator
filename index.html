@@ -492,11 +492,15 @@
                 setFormData(prev => ({...prev, troubleshooting: newArr}));
             };
 
-            const generateUUID = (prefix = "id") => {
+            const generateUUID = () => {
                 if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
                     return crypto.randomUUID();
                 }
-                return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    const r = Math.random() * 16 | 0;
+                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
             };
 
             const parseGradeSemester = (kelasText = "") => {
@@ -515,7 +519,7 @@
                 const nowIso = new Date().toISOString();
                 const gradeInfo = parseGradeSemester(formData.kelas || "");
                 const exportData = {
-                    lessonPlanId: generateUUID("lp"),
+                    lessonPlanId: generateUUID(),
                     createdAt: nowIso,
                     updatedAt: nowIso,
                     appName: "Smart RPP Generator Pro",
@@ -580,7 +584,7 @@
                 const dateStr = new Date().toISOString().split("T")[0];
                 const gradeInfo = parseGradeSemester(formData.kelas || "");
                 const draftData = {
-                    assessmentId: generateUUID("asm"),
+                    assessmentId: generateUUID(),
                     source: {
                         type: "lesson_plan_export",
                         app: "Smart RPP Generator Pro"
