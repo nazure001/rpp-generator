@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Smart Assessment Generator Pro - Generator Kisi-Kisi, Soal HOTS (PG & Uraian), dan Rubrik Asesmen Terintegrasi CP BSKAP 2026 dan Observasi PMM.">
+    <title>Smart Assessment Generator Pro | Kurikulum Merdeka 2026</title>
+    
+    <!-- Dependencies -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: {
+                        slate: { 750: '#293548', 850: '#151e2e', 950: '#0b111d' },
+                        brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
+                        emerald: { 400: '#34d399', 500: '#10b981', 600: '#059669' },
+                        amber: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706' }
+                    },
+                    animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0b111d; color: #f8fafc; }
+        .glass-panel { background: rgba(30, 41, 59, 0.65); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .glass-card { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); transition: all 0.3s ease; }
+        .glass-card:hover { border-color: rgba(59, 130, 246, 0.4); box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.1); }
+        input[type="text"], select, textarea { background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.12); color: #f8fafc; transition: all 0.3s ease; }
+        input[type="text"]:focus, select:focus, textarea:focus { background: rgba(15, 23, 42, 0.95); border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25); outline: none; }
+        input::placeholder, textarea::placeholder { color: #64748b; }
+        textarea::-webkit-scrollbar { width: 6px; }
+        textarea::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 8px; }
+        textarea::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 8px; }
+        textarea::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+        optgroup { background: #1e293b; color: #94a3b8; font-weight: bold; }
+        option { background: #0f172a; color: #f8fafc; font-weight: normal; padding: 6px; }
+        
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white !important; color: black !important; margin: 0; padding: 0; }
+            .glass-panel, .glass-card { background: none !important; box-shadow: none !important; border: none !important; backdrop-filter: none !important; }
+            .page-break { page-break-before: always; }
+            table { page-break-inside: avoid; border-collapse: collapse !important; }
+            th, td { border: 1px solid #000 !important; color: #000 !important; }
+            .print-container { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 10mm !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen transition-colors duration-300">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useId } = React;
+
+        // --- BSKAP NO 046/H/KR/2026 CURRICULUM DATABASE FRAMEWORK ---
+        const DATABASE_KURIKULUM = {
+            "PAUD (Fase Fondasi)": {
+                "Nilai Agama & Budi Pekerti": { "Pemahaman & Praktik": "Anak mengenali dan mempraktikkan nilai ajaran agamanya, menunjukkan sikap menyayangi sesama makhluk hidup, serta menjaga kebersihan." },
+                "Jati Diri": { "Pengelolaan Diri": "Anak mengenali identitas diri, mengontrol emosi, bangga terhadap latar belakang budayanya, serta memiliki kemampuan motorik yang matang." },
+                "Literasi & STEAM": { "Eksplorasi Kognitif": "Anak menunjukkan kemampuan dasar literasi, berhitung awal, serta mengeksplorasi media seni dan teknologi sederhana." }
+            },
+            "Fase A (SD Kelas 1-2)": {
+                "Pendidikan Pancasila": { "Pancasila": "Peserta didik mampu mengenal simbol dan sila Pancasila dalam lambang negara Garuda Pancasila, serta menceritakan hubungan simbol dengan sila." },
+                "Bahasa Indonesia": { "Membaca & Memirsa": "Peserta didik mampu membaca kata-kata yang sering ditemui dengan fasih, memahami informasi dari tayangan teks atau gambar sederhana." },
+                "Matematika": { "Bilangan": "Peserta didik dapat membaca, menulis, menentukan nilai tempat, dan membandingkan bilangan cacah sampai dengan 100." },
+                "Seni Budaya": { "Menciptakan": "Peserta didik mampu menciptakan karya seni rupa, musik, atau tari sederhana berdasarkan pengalaman keseharian." },
+                "PJOK": { "Keterampilan Gerak": "Peserta didik menunjukkan kemampuan dalam menirukan pola gerak dasar lokomotor, non-lokomotor, dan manipulatif." }
+            },
+            "Fase B (SD Kelas 3-4)": {
+                "Pendidikan Pancasila": { "Bhinneka Tunggal Ika": "Peserta didik mampu mengidentifikasi dan menghargai keragaman identitas diri, suku bangsa, agama, dan budaya di lingkungannya." },
+                "Bahasa Indonesia": { "Membaca & Memirsa": "Peserta didik mampu memahami pesan dan informasi tentang kehidupan sehari-hari dari teks narasi dan puisi anak." },
+                "Matematika": { "Bilangan": "Peserta didik membaca, menulis, dan mengurutkan bilangan cacah sampai 10.000, serta melakukan operasi perkalian dan pembagian dasar." },
+                "Ilmu Pengetahuan Alam & Sosial (IPAS)": { "Pemahaman IPAS": "Peserta didik memahami siklus hidup, wujud zat, bentuk energi, serta bentang alam dan kearifan lokal." }
+            },
+            "Fase C (SD Kelas 5-6)": {
+                "Pendidikan Pancasila": { "NKRI": "Peserta didik memahami makna kesatuan wilayah dan pemerintahan negara Indonesia, serta menunjukkan sikap gotong royong." },
+                "Bahasa Indonesia": { "Menulis": "Peserta didik mampu menulis teks eksplanasi, laporan hasil pengamatan, dan teks narasi dengan ejaan yang tepat." },
+                "Matematika": { "Analisis Data": "Peserta didik dapat mengumpulkan, menyajikan, dan menganalisis data menggunakan diagram batang dan lingkaran." },
+                "Ilmu Pengetahuan Alam & Sosial (IPAS)": { "Pemahaman IPAS": "Peserta didik menganalisis sistem organ, interaksi ekosistem, sifat bunyi cahaya, sejarah kemerdekaan, dan tata surya." }
+            },
+            "Fase D (SMP/MTs Grade 7-9)": {
+                "Pendidikan Agama & Budi Pekerti": { "Akhlak": "Peserta didik merefleksikan nilai-nilai keagamaan dalam perilaku sehari-hari, berakhlak mulia terhadap diri, sesama, alam, dan negara." },
+                "Pendidikan Pancasila": { "Pancasila": "Peserta didik menganalisis dinamika perwujudan Pancasila sebagai dasar negara dan pandangan hidup bangsa." },
+                "Bahasa Indonesia": { "Membaca & Memirsa": "Peserta didik mengeksplorasi, menyimpulkan, dan mengevaluasi gagasan dari teks deskripsi, narasi, puisi, eksplanasi, dan argumentasi." },
+                "Matematika": { "Aljabar": "Peserta didik mengenali pola, menyelesaikan persamaan linear satu variabel, serta menerapkan relasi dan fungsi linear." },
+                "Ilmu Pengetahuan Alam (IPA)": { "Pemahaman IPA": "Peserta didik memahami klasifikasi zat, struktur sel, sistem organ manusia, pewarisan sifat, mekanika Newton, dan gelombang." },
+                "Ilmu Pengetahuan Sosial (IPS)": { "Pemahaman IPS": "Peserta didik menganalisis kondisi geografis Indonesia, dinamika interaksi sosial, sejarah bangsa, dan kegiatan ekonomi." },
+                "Informatika": { "Berpikir Komputasional (BK)": "Peserta didik menerapkan berpikir komputasional untuk memecahkan persoalan data diskrit dan mengabstraksikan algoritma." },
+                "Bahasa Inggris": { "Menulis & Mempresentasikan": "Peserta didik menyusun dan mempresentasikan teks lisan maupun tulis terstruktur terkait topik personal dan lingkungan." }
+            },
+            "Fase E (SMA/SMK Kelas 10)": {
+                "Sains Inti (Fisika, Kimia, Biologi)": { "Analisis Makro": "Peserta didik mampu mengevaluasi fenomena ilmiah global (perubahan iklim, energi alternatif), dan menyusun laporan berbasis data valid." },
+                "Ilmu Sosial Inti": { "Analisis Dinamika Sosial": "Peserta didik menganalisis fenomena sosial, mitigasi bencana, sejarah kemerdekaan, dan memecahkan masalah ekonomi." },
+                "Bahasa & Sastra": { "Analisis Kritis & Kreatif": "Peserta didik mengevaluasi informasi kompleks dari teks sastra, menyusun esai argumentatif, serta memproduksi karya kreatif." }
+            },
+            "Fase F (SMA/SMK Kelas 11-12)": {
+                "Spesialisasi MIPA / IPS / Bahasa / Kejuruan": { "Aplikasi Tingkat Tinggi & Inovasi": "Peserta didik mengintegrasikan konsep keahlian spesifik lintas disiplin untuk memecahkan kasus kompleks, mendesain inovasi, dan adaptasi profesional." }
+            }
+        };
+
+        // --- TAKSONOMI BLOOM & KATA KERJA OPERASIONAL ---
+        const TAKSONOMI_BLOOM = {
+            "C1 - Mengingat (Remembering)": {
+                desc: "Mengenali dan mengingat kembali fakta atau konsep dasar.",
+                kko: "Sebutkan, Definisikan, Tunjukkan, Daftarkan, Identifikasi",
+                weight: "10%"
+            },
+            "C2 - Memahami (Understanding)": {
+                desc: "Menjelaskan ide, makna, atau konsep dengan bahasa sendiri.",
+                kko: "Jelaskan, Rangkum, Bedakan, Berikan contoh, Klasifikasikan",
+                weight: "15%"
+            },
+            "C3 - Mengaplikasikan (Applying)": {
+                desc: "Menerapkan pengetahuan pada situasi nyata atau masalah baru.",
+                kko: "Terapkan, Hitung, Demonstrasikan, Gunakan, Selesaikan",
+                weight: "20%"
+            },
+            "C4 - Menganalisis / HOTS (Analyzing)": {
+                desc: "Memecah informasi menjadi struktur penjelas dan mencari pola hubungan.",
+                kko: "Analisislah, Bandingkan, Hubungkan, Telaah, Simpulkan sebab-akibat",
+                weight: "20%"
+            },
+            "C5 - Mengevaluasi / HOTS (Evaluating)": {
+                desc: "Membuat penilaian atau keputusan argumen berdasarkan kriteria standar.",
+                kko: "Evaluasilah, Kritik, Berikan pertimbangan, Nilailah, Buktikan",
+                weight: "15%"
+            },
+            "C6 - Mencipta / HOTS (Creating)": {
+                desc: "Merancang atau membangun struktur/gagasan baru yang inovatif dan solutif.",
+                kko: "Rancanglah, Formulasikan, Ciptakan, Susunlah desain, Modifikasi",
+                weight: "20%"
+            }
+        };
+
+        // --- 8 INDIKATOR OBSERVASI PMM ---
+        const DATA_PMM = {
+            "Disiplin Positif": "Upaya menerapkan prinsip kedisiplinan tanpa hukuman fisik/verbal melalui kesepakatan kelas dan restitusi.",
+            "Keteraturan Suasana Kelas": "Membangun atmosfer belajar yang aman, tertib, fokus, dan bebas dari gangguan emosional.",
+            "Ekspektasi pada Peserta Didik": "Menyampaikan harapan tinggi yang realistis untuk menumbuhkan motivasi intrinsik dan kepercayaan diri siswa.",
+            "Perhatian dan Kepedulian": "Memberikan perhatian penuh pada kebutuhan fisik, emosional, dan psikologis siswa selama proses belajar.",
+            "Umpan Balik Konstruktif": "Memberikan masukan spesifik, solutif, dan menyemangati atas hasil unjuk kerja atau sikap siswa.",
+            "Instruksi yang Adaptif": "Menyesuaikan strategi pembelajaran, scaffolding, dan tingkat kesulitan soal dengan keragaman kompetensi siswa.",
+            "Instruksi Pembelajaran": "Menyampaikan penjelasan materi secara terstruktur, runtut, jelas, serta menggunakan visualisasi peraga yang relevan.",
+            "Aktivitas Interaktif": "Memfasilitasi diskusi kolaboratif, tanya jawab partisipatif, dan proyek kelompok yang menstimulasi pemikiran kritis."
+        };
+
+        // --- ASSESSMENT ENGINE (GENERATOR CERDAS TANPA API KEY) ---
+        const AssessmentEngine = {
+            generateKisiKisi: (fase, mapel, topik, bloom, cpText) => {
+                const t = topik || "[Topik Pembelajaran]";
+                const m = mapel || "[Mata Pelajaran]";
+                const b = bloom || "C4 - Menganalisis / HOTS (Analyzing)";
+                const kko = TAKSONOMI_BLOOM[bloom] ? TAKSONOMI_BLOOM[bloom].kko.split(", ")[0] : "Analisislah";
+
+                return [
+                    {
+                        no: 1,
+                        tp: `Peserta didik mampu menjelaskan konsep dasar ${t} dalam ruang lingkup ${m}.`,
+                        indikator: `Disajikan ilustrasi singkat mengenai ${t}, peserta didik dapat mengidentifikasi unsur utama dengan tepat.`,
+                        level: "C2 (Memahami)",
+                        bentuk: "Pilihan Ganda (PG)",
+                        bobot: "15"
+                    },
+                    {
+                        no: 2,
+                        tp: `Peserta didik mampu mengaplikasikan prinsip ${t} pada situasi penyelesaian masalah.`,
+                        indikator: `Disajikan data/skenario sederhana, peserta didik dapat menghitung atau menentukan penerapan ${t}.`,
+                        level: "C3 (Mengaplikasikan)",
+                        bentuk: "Pilihan Ganda (PG)",
+                        bobot: "15"
+                    },
+                    {
+                        no: 3,
+                        tp: `Peserta didik mampu menganalisis hubungan antar komponen dalam fenomena ${t}.`,
+                        indikator: `Disajikan studi kasus fenomena keseharian, peserta didik mampu menelaah faktor penyebab masalah terkait ${t}.`,
+                        level: "C4 (Menganalisis)",
+                        bentuk: "Pilihan Ganda (PG)",
+                        bobot: "20"
+                    },
+                    {
+                        no: 4,
+                        tp: `Peserta didik mampu mengevaluasi efektivitas strategi atau solusi terkait permasalahan ${t}.`,
+                        indikator: `Disajikan dua alternatif penyelesaian masalah, peserta didik dapat memberikan argumen evaluatif yang objektif.`,
+                        level: "C5 (Mengevaluasi)",
+                        bentuk: "Uraian / Esai",
+                        bobot: "25"
+                    },
+                    {
+                        no: 5,
+                        tp: `Peserta didik mampu merancang gagasan/solusi inovatif berbasis ${t} untuk lingkungan sekitar.`,
+                        indikator: `Peserta didik dapat menyusun draf desain atau solusi aplikatif yang merefleksikan penguasaan mendalam materi ${t}.`,
+                        level: "C6 (Mencipta)",
+                        bentuk: "Uraian / Proyek",
+                        bobot: "25"
+                    }
+                ];
+            },
+
+            generateSoalPG: (topik, mapel, bloom) => {
+                const t = topik || "Topik Materi";
+                const m = mapel || "Mata Pelajaran";
+                return [
+                    {
+                        no: 1,
+                        soal: `Perhatikan pernyataan mengenai konsep dasar dalam ${m} berikut!\nDalam mempelajari mengenai "${t}", seorang siswa mengamati fenomena yang terjadi di sekitarnya. Karakteristik utama yang membedakan konsep "${t}" dengan konsep terkait lainnya adalah...`,
+                        opsi: [
+                            "A. Memiliki ketergantungan mutlak pada faktor eksternal tanpa adanya interaksi internal.",
+                            `B. Adanya hubungan dinamis dan konsisten yang membentuk pola keteraturan pada ${t}.`,
+                            "C. Perubahan statis yang tidak memberikan dampak pada lingkungan sekitar.",
+                            "D. Terjadinya proses reduksi komponen tanpa melibatkan prinsip dasar yang berlaku."
+                        ],
+                        kunci: "B",
+                        pembahasan: `Kunci B tepat karena konsep dasar "${t}" dalam disiplin ${m} selalu melibatkan hubungan dinamis dan konsisten antar komponennya sesuai dengan asas keteraturan ilmiah/konseptual.`
+                    },
+                    {
+                        no: 2,
+                        soal: `Diberikan sebuah kasus penerapan "${t}" pada situasi nyata di lingkungan sekolah. Jika kondisi awal mengalami peningkatan efektivitas sebesar dua kali lipat akibat penyesuaian parameter ${m}, maka implikasi langsung yang paling logis adalah...`,
+                        opsi: [
+                            "A. Kinerja sistem secara keseluruhan akan menurun drastis karena kelebihan beban.",
+                            "B. Tidak terjadi perubahan signifikan karena parameter tersebut bersifat netral.",
+                            `C. Optimalisasi hasil capaian sesuai dengan prinsip penerapan ${t} yang terukur.`,
+                            "D. Terjadinya distorsi data yang mengharuskan pengulangan prosedur dari awal."
+                        ],
+                        kunci: "C",
+                        pembahasan: `Kunci C merupakan pilihan paling logis karena penyesuaian parameter positif dalam teori "${t}" dirancang untuk memberikan optimalisasi unjuk kerja sistem yang terukur.`
+                    },
+                    {
+                        no: 3,
+                        soal: `(Soal HOTS - Analisis)\nSeorang peneliti atau praktisi menemukan anomali/penyimpangan saat melakukan eksperimen atau telaah mengenai "${t}". Setelah dianalisis lebih lanjut, faktor yang paling memungkinkan menjadi akar penyebab terjadinya kesenjangan hasil tersebut adalah...`,
+                        opsi: [
+                            `A. Penggunaan indikator pemantauan yang kurang sinkron dengan karakteristik esensial dari ${t}.`,
+                            "B. Pengaruh kondisi cuaca atau waktu pelaksanaan yang tidak memiliki relevansi teoritis.",
+                            "C. Terlalu banyaknya instrumen pendukung yang bekerja secara sempurna.",
+                            "D. Ketaatan penuh terhadap prosedur baku tanpa ada langkah yang terlewat."
+                        ],
+                        kunci: "A",
+                        pembahasan: `Dalam analisis kesalahan (HOTS), ketidaksinkronan antara indikator pemantauan dengan karakteristik esensial dari "${t}" merupakan akar penyebab utama terjadinya distorsi atau kesenjangan hasil.`
+                    },
+                    {
+                        no: 4,
+                        soal: `Perhatikan tabel atau ilustrasi relasi antar unsur dalam "${t}". Berdasarkan korelasi data tersebut, pernyataan kesimpulan yang memiliki validitas paling tinggi adalah...`,
+                        opsi: [
+                            "A. Setiap kenaikan variabel input selalu diikuti oleh penurunan kualitas output secara linier.",
+                            `B. Terdapat hubungan kesetimbangan atau proporsionalitas yang kuat dalam mekanisme ${t}.`,
+                            "C. Variabel pendukung tidak memiliki kontribusi terhadap unjuk kerja sistem secara umum.",
+                            "D. Seluruh komponen bekerja secara terisolasi tanpa saling mempengaruhi satu sama lain."
+                        ],
+                        kunci: "B",
+                        pembahasan: `Koreksi atas prinsip ilmiah/sosial dalam ${m} menyatakan bahwa keteraturan dalam "${t}" dicirikan oleh adanya relasi proporsionalitas yang saling mendukung antar variabel.`
+                    },
+                    {
+                        no: 5,
+                        soal: `Dalam konteks kemajuan teknologi dan tantangan zaman 2026, implementasi pemahaman "${t}" yang paling memberikan dampak positif keberlanjutan bagi masyarakat adalah...`,
+                        opsi: [
+                            "A. Menghindari penggunaan teknologi modern untuk mempertahankan metode konvensional sepenuhnya.",
+                            `B. Mengintegrasikan prinsip ${t} dengan digitalisasi ramah lingkungan dan penyelesaian masalah sosial.`,
+                            "C. Membatasi akses informasi terkait materi tersebut hanya untuk kalangan akademisi tertentu.",
+                            "D. Menerapkan konsep secara teoritis di dalam kelas tanpa perlu pembuktian praktik lapangan."
+                        ],
+                        kunci: "B",
+                        pembahasan: `Pembelajaran bermakna (Deep Learning) menuntut integrasi konsep materi "${t}" dengan penyelesaian masalah nyata (problem-solving) dan pemanfaatan teknologi yang ramah lingkungan.`
+                    }
+                ];
+            },
+
+            generateSoalUraian: (topik, mapel, bloom) => {
+                const t = topik || "Topik Materi";
+                const m = mapel || "Mata Pelajaran";
+                return [
+                    {
+                        no: 1,
+                        level: "C4 (Menganalisis - HOTS)",
+                        soal: `Jelaskan secara komprehensif bagaimana mekanisme kerja atau alur konseptual dari "${t}" dalam pelajaran ${m}! Berikan analisis Anda mengenai mengapa pemahaman konsep ini sangat esensial dalam kehidupan sehari-hari!`,
+                        rambu: `1. Menyebutkan definisi dan prinsip dasar dari ${t} dengan bahasa yang jelas dan runtun.\n2. Menguraikan relasi antar komponen pendukung utama.\n3. Memberikan minimal 2 contoh relevansi nyata dalam keseharian yang objektif.`,
+                        skorMaks: 30
+                    },
+                    {
+                        no: 2,
+                        level: "C5 (Mengevaluasi - HOTS)",
+                        soal: `Bayangkan Anda dihadapkan pada sebuah permasalahan di lingkungan sekolah atau masyarakat di mana penerapan aturan atau sistem terkait "${t}" tidak berjalan efektif. Lakukan evaluasi kritis atas kegagalan tersebut dan kemukakan argumen Anda!`,
+                        rambu: `1. Mengidentifikasi minimal 2 faktor kelemahan atau hambatan pelaksanaan ${t}.\n2. Menganalisis dampak negatif yang ditimbulkan jika masalah tidak ditangani.\n3. Menyajikan argumen evaluatif berbasis data atau logika disiplin ilmu ${m}.`,
+                        skorMaks: 35
+                    },
+                    {
+                        no: 3,
+                        level: "C6 (Mencipta / Inovasi - HOTS)",
+                        soal: `Rancanglah sebuah gagasan inovatif, purwarupa proyek sederhana, atau langkah strategis baru untuk memanfaatkan konsep "${t}" guna memberikan solusi atas tantangan masa kini! Jelaskan langkah-langkah implementasinya!`,
+                        rambu: `1. Menampilkan ide inovasi yang orisinal, relevan, dan bisa diterapkan (feasible).\n2. Menjelaskan tahapan implementasi dari persiapan, pelaksanaan, hingga pengujian.\n3. Menguraikan manfaat jangka panjang bagi lingkungan atau komunitas.`,
+                        skorMaks: 35
+                    }
+                ];
+            },
+
+            generateRubrikSikap: (indikatorPMM) => {
+                const ind = indikatorPMM || "Disiplin Positif";
+                return [
+                    {
+                        aspek: `Kesadaran & Pemahaman (${ind})`,
+                        bm: "Belum menunjukkan pemahaman terhadap kesepakatan dan prinsip dasar perilaku. Membutuhkan pengingat konstan dari guru.",
+                        bkg: "Mulai memahami kesepakatan kelas namun masih adakalanya inkonsisten saat menghadapi situasi baru.",
+                        ckp: "Konsisten menunjukkan perilaku selaras dengan prinsip kedisiplinan dan kesepakatan kelas tanpa perlu pengingat.",
+                        mhr: "Proaktif menjadi teladan bagi rekan sekelas, mampu mengajak orang lain mematuhi kesepakatan dengan empati."
+                    },
+                    {
+                        aspek: "Kolaborasi & Tanggung Jawab Tugas",
+                        bm: "Cenderung pasif dalam kerja kelompok, menunggu instruksi, dan belum menyelesaikan beban tugas tepat waktu.",
+                        bkg: "Mengerjakan bagian tugasnya dengan cukup baik meskipun terkadang memerlukan bantuan atau pengarahan ketua kelompok.",
+                        ckp: "Melaksanakan tanggung jawab mandiri dan kelompok dengan tuntas, berkontribusi aktif dalam diskusi pembahasan materi.",
+                        mhr: "Mampu memimpin pembagian peran, memfasilitasi solusi saat kelompok menemui jalan buntu, dan menjamin mutu tugas."
+                    },
+                    {
+                        aspek: "Kemandirian & Berpikir Kritis (HOTS)",
+                        bm: "Hanya menyalin jawaban atau ide dasar tanpa berusaha menganalisis permasalahan secara mandiri.",
+                        bkg: "Mampu menjawab pertanyaan dasar dengan tepat, namun membutuhkan pijakan (scaffolding) untuk soal analisis kompleks.",
+                        ckp: "Mampu menganalisis masalah, menyusun argumen logis, dan menyelesaikan penugasan HOTS dengan mandiri.",
+                        mhr: "Menghasilkan gagasan baru yang kreatif, mampu mengevaluasi berbagai sudut pandang, dan merefleksikan proses belajarnya."
+                    }
+                ];
+            }
+        };
+
+        // --- COMPONENTS ---
+        const InputGroup = ({ label, name, val, change, placeholder }) => {
+            const id = useId();
+            return (
+                <div className="flex flex-col gap-1.5">
+                    <label htmlFor={id} className="text-xs font-semibold text-slate-300 ml-1 uppercase tracking-wider">{label}</label>
+                    <input id={id} type="text" name={name} value={val} onChange={change} placeholder={placeholder} className="w-full p-3 rounded-xl text-sm outline-none shadow-inner" />
+                </div>
+            );
+        };
+
+        const AreaGroup = ({ label, name, val, change, rows, placeholder }) => {
+            const id = useId();
+            return (
+                <div className="flex flex-col gap-1.5 w-full">
+                    <label htmlFor={id} className="text-xs font-semibold text-slate-300 ml-1 uppercase tracking-wider">{label}</label>
+                    <textarea id={id} name={name} value={val} onChange={change} rows={rows || 4} placeholder={placeholder} className="w-full p-3 rounded-xl text-sm outline-none leading-relaxed shadow-inner"></textarea>
+                </div>
+            );
+        };
+
+        const ButtonPrimary = ({ children, onClick, icon, disabled }) => (
+            <button onClick={onClick} disabled={disabled} className={`flex items-center justify-center gap-2 bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-500 hover:to-brand-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg shadow-brand-600/30 hover:shadow-brand-600/50 hover:-translate-y-0.5 transition-all duration-200 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                {icon && <i data-lucide={icon} className="w-4 h-4"></i>}
+                <span>{children}</span>
+            </button>
+        );
+
+        const ButtonSecondary = ({ children, onClick, icon }) => (
+            <button onClick={onClick} className="flex items-center justify-center gap-2 bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-6 rounded-xl border border-white/10 hover:border-white/20 hover:-translate-y-0.5 transition-all duration-200">
+                {icon && <i data-lucide={icon} className="w-4 h-4"></i>}
+                <span>{children}</span>
+            </button>
+        );
+
+        // --- MAIN APPLICATION ---
+        function App() {
+            const [step, setStep] = useState(1);
+            const [selectedFase, setSelectedFase] = useState("Fase D (SMP/MTs Grade 7-9)");
+            const [selectedMapel, setSelectedMapel] = useState("Ilmu Pengetahuan Alam (IPA)");
+            const [selectedCP, setSelectedCP] = useState("");
+
+            const [formData, setFormData] = useState({
+                sekolah: "SMP Negeri 1 Merdeka Belajar",
+                guru: "Purwa Umbara, S.Pd.",
+                nipGuru: "19880101 201001 1 001",
+                kepalaSekolah: "Dr. H. Ahmad Sudirman, M.Pd.",
+                nipKepalaSekolah: "19750505 199802 1 002",
+                kelas: "VII (Tujuh) / Ganjil",
+                topik: "Hukum Newton dan Dinamika Gerak",
+                jenisAsesmen: "Paket Komprehensif (Diagnostik, Formatif, Sumatif)",
+                bloom: "C4 - Menganalisis / HOTS (Analyzing)",
+                indikatorPMM: "Disiplin Positif",
+                
+                // Generated Content
+                kisiKisi: [],
+                soalPG: [],
+                soalUraian: [],
+                rubrikSikap: [],
+                catatanUmum: "Instrumen asesmen ini dirancang berbasis prinsip Deep Learning dan pedoman asesmen Kurikulum Merdeka BSKAP No. 046/H/KR/2026."
+            });
+
+            // Update Mapel options when Fase changes
+            useEffect(() => {
+                if (DATABASE_KURIKULUM[selectedFase]) {
+                    const firstMapel = Object.keys(DATABASE_KURIKULUM[selectedFase])[0];
+                    setSelectedMapel(firstMapel);
+                }
+            }, [selectedFase]);
+
+            // Update CP when Mapel changes
+            useEffect(() => {
+                if (DATABASE_KURIKULUM[selectedFase] && DATABASE_KURIKULUM[selectedFase][selectedMapel]) {
+                    const elem = DATABASE_KURIKULUM[selectedFase][selectedMapel];
+                    const firstElemKey = Object.keys(elem)[0];
+                    setSelectedCP(`${firstElemKey}: ${elem[firstElemKey]}`);
+                }
+            }, [selectedFase, selectedMapel]);
+
+            // Trigger generation whenever parameters change
+            useEffect(() => {
+                const kisi = AssessmentEngine.generateKisiKisi(selectedFase, selectedMapel, formData.topik, formData.bloom, selectedCP);
+                const pg = AssessmentEngine.generateSoalPG(formData.topik, selectedMapel, formData.bloom);
+                const uraian = AssessmentEngine.generateSoalUraian(formData.topik, selectedMapel, formData.bloom);
+                const rubrik = AssessmentEngine.generateRubrikSikap(formData.indikatorPMM);
+
+                setFormData(prev => ({
+                    ...prev,
+                    kisiKisi: kisi,
+                    soalPG: pg,
+                    soalUraian: uraian,
+                    rubrikSikap: rubrik
+                }));
+            }, [selectedFase, selectedMapel, formData.topik, formData.bloom, formData.indikatorPMM, selectedCP]);
+
+            useEffect(() => {
+                if (window.lucide) window.lucide.createIcons();
+            }, [step]);
+
+            const handleInputChange = (e) => {
+                const { name, value } = e.target;
+                setFormData(prev => ({ ...prev, [name]: value }));
+            };
+
+            const handlePrint = () => {
+                window.print();
+            };
+
+            // Customizing Kisi-Kisi item
+            const handleKisiChange = (index, field, value) => {
+                const updated = [...formData.kisiKisi];
+                updated[index][field] = value;
+                setFormData(prev => ({ ...prev, kisiKisi: updated }));
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col justify-between">
+                    {/* TOP NAVIGATION BAR */}
+                    <header className="sticky top-0 z-40 glass-panel border-b border-white/10 no-print">
+                        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="bg-gradient-to-br from-brand-500 to-brand-700 p-3 rounded-2xl shadow-lg shadow-brand-500/30 flex items-center justify-center">
+                                    <i data-lucide="award" className="w-7 h-7 text-white"></i>
+                                </div>
+                                <div>
+                                    <h1 className="text-xl font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                                        Smart Assessment Generator Pro
+                                    </h1>
+                                    <p className="text-xs text-brand-400 font-medium flex items-center gap-1.5 mt-0.5">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                        Standar Kurikulum Merdeka BSKAP 046/H/KR/2026 & PMM
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <a href="index.html" className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-white/10 text-xs font-semibold transition-all shadow-md">
+                                    <i data-lucide="arrow-left" className="w-4 h-4"></i>
+                                    <span>Kembali ke RPP Generator</span>
+                                </a>
+                                {step === 5 && (
+                                    <button onClick={handlePrint} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-emerald-600/30 hover:scale-105 transition-all">
+                                        <i data-lucide="printer" className="w-4 h-4"></i>
+                                        <span>Cetak Dokumen / PDF</span>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* STEP PROGRESS INDICATOR */}
+                    <div className="max-w-7xl mx-auto px-6 py-6 w-full no-print">
+                        <div className="glass-panel rounded-2xl p-4">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                {[
+                                    { num: 1, label: 'Konfigurasi & Kurikulum', icon: 'settings' },
+                                    { num: 2, label: 'Kisi-Kisi Soal', icon: 'table-2' },
+                                    { num: 3, label: 'Bank Soal PG & Esai', icon: 'file-text' },
+                                    { num: 4, label: 'Rubrik Observasi PMM', icon: 'check-square' },
+                                    { num: 5, label: 'Pratinjau & Cetak A4', icon: 'printer' }
+                                ].map((item) => (
+                                    <button 
+                                        key={item.num} 
+                                        onClick={() => setStep(item.num)}
+                                        className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${step === item.num ? 'bg-gradient-to-r from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 scale-105' : step > item.num ? 'bg-slate-800/80 text-emerald-400 border border-emerald-500/30' : 'bg-slate-900/50 text-slate-400 hover:bg-slate-800 border border-white/5'}`}
+                                    >
+                                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs ${step === item.num ? 'bg-white/20 text-white' : step > item.num ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400'}`}>
+                                            {step > item.num ? <i data-lucide="check" className="w-3.5 h-3.5"></i> : item.num}
+                                        </div>
+                                        <span>{item.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* MAIN CONTENT AREA */}
+                    <main className="max-w-7xl mx-auto px-6 pb-16 flex-grow w-full">
+                        {/* TAHAP 1: KONFIGURASI & KURIKULUM */}
+                        {step === 1 && (
+                            <div className="glass-panel rounded-3xl p-8 space-y-8 no-print animate-fade-in">
+                                <div className="border-b border-white/10 pb-5">
+                                    <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
+                                        <i data-lucide="settings" className="w-6 h-6 text-brand-400"></i>
+                                        <span>Tahap 1: Konfigurasi Identitas & Pemetaan Kurikulum</span>
+                                    </h2>
+                                    <p className="text-sm text-slate-400 mt-1">
+                                        Pilih jenjang fase, mata pelajaran, dan karakteristik asesmen. Sistem otomatis merumuskan butir soal kontekstual.
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <InputGroup label="Nama Sekolah" name="sekolah" val={formData.sekolah} change={handleInputChange} placeholder="Contoh: SMP Negeri 1 Merdeka" />
+                                    <InputGroup label="Nama Guru Mata Pelajaran" name="guru" val={formData.guru} change={handleInputChange} placeholder="Contoh: Purwa Umbara, S.Pd." />
+                                    <InputGroup label="NIP Guru" name="nipGuru" val={formData.nipGuru} change={handleInputChange} placeholder="Contoh: 19880101 201001 1 001" />
+                                    <InputGroup label="Nama Kepala Sekolah" name="kepalaSekolah" val={formData.kepalaSekolah} change={handleInputChange} placeholder="Contoh: Dr. H. Ahmad Sudirman, M.Pd." />
+                                    <InputGroup label="NIP Kepala Sekolah" name="nipKepalaSekolah" val={formData.nipKepalaSekolah} change={handleInputChange} placeholder="Contoh: 19750505 199802 1 002" />
+                                    <InputGroup label="Kelas / Semester" name="kelas" val={formData.kelas} change={handleInputChange} placeholder="Contoh: VII / Ganjil" />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/10">
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-xs font-semibold text-slate-300 ml-1 uppercase tracking-wider">Jenjang Fase Kurikulum</label>
+                                        <select value={selectedFase} onChange={(e) => setSelectedFase(e.target.value)} className="w-full p-3 rounded-xl text-sm outline-none font-medium">
+                                            {Object.keys(DATABASE_KURIKULUM).map((fase, i) => <option key={i} value={fase}>{fase}</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-xs font-semibold text-slate-300 ml-1 uppercase tracking-wider">Mata Pelajaran (Sinkron BSKAP 2026)</label>
+                                        <select value={selectedMapel} onChange={(e) => setSelectedMapel(e.target.value)} className="w-full p-3 rounded-xl text-sm outline-none font-medium">
+                                            {DATABASE_KURIKULUM[selectedFase] && Object.keys(DATABASE_KURIKULUM[selectedFase]).map((mapel, i) => <option key={i} value={mapel}>{mapel}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="glass-card p-5 rounded-2xl border border-brand-500/30 bg-brand-950/20">
+                                    <div className="text-xs font-bold uppercase tracking-wider text-brand-400 mb-1 flex items-center gap-2">
+                                        <i data-lucide="book-open" className="w-4 h-4"></i>
+                                        <span>Capaian Pembelajaran (CP) Resmi BSKAP 2026</span>
+                                    </div>
+                                    <p className="text-sm text-slate-200 leading-relaxed font-normal mt-2">{selectedCP}</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+                                    <InputGroup label="Topik Materi Pembelajaran" name="topik" val={formData.topik} change={handleInputChange} placeholder="Contoh: Hukum Newton dan Dinamika Gerak" />
+                                    
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-xs font-semibold text-slate-300 ml-1 uppercase tracking-wider">Level Kognitif Dominan (Bloom)</label>
+                                        <select name="bloom" value={formData.bloom} onChange={handleInputChange} className="w-full p-3 rounded-xl text-sm outline-none font-medium text-amber-400">
+                                            {Object.keys(TAKSONOMI_BLOOM).map((k, i) => <option key={i} value={k}>{k}</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-xs font-semibold text-slate-300 ml-1 uppercase tracking-wider">Target Observasi PMM (Rubrik Sikap)</label>
+                                        <select name="indikatorPMM" value={formData.indikatorPMM} onChange={handleInputChange} className="w-full p-3 rounded-xl text-sm outline-none font-medium text-emerald-400">
+                                            {Object.keys(DATA_PMM).map((k, i) => <option key={i} value={k}>{k}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end pt-6 border-t border-white/10">
+                                    <ButtonPrimary onClick={() => setStep(2)} icon="arrow-right">Lanjut ke Kisi-Kisi Soal</ButtonPrimary>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAHAP 2: KISI-KISI SOAL */}
+                        {step === 2 && (
+                            <div className="glass-panel rounded-3xl p-8 space-y-8 no-print">
+                                <div className="border-b border-white/10 pb-5 flex flex-wrap items-center justify-between gap-4">
+                                    <div>
+                                        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
+                                            <i data-lucide="table-2" className="w-6 h-6 text-brand-400"></i>
+                                            <span>Tahap 2: Matriks Kisi-Kisi Soal (Exam Blueprint)</span>
+                                        </h2>
+                                        <p className="text-sm text-slate-400 mt-1">
+                                            Tabel kisi-kisi berikut dirumuskan otomatis berdasarkan Topik <span className="text-brand-400 font-semibold">{formData.topik}</span>. Anda dapat menyunting isi kolom secara langsung.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="overflow-x-auto rounded-2xl border border-white/10 shadow-xl">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="bg-slate-900/90 text-slate-300 text-xs uppercase tracking-wider border-b border-white/10">
+                                                <th className="p-4 w-12 text-center">No</th>
+                                                <th className="p-4 w-1/4">Tujuan Pembelajaran (TP)</th>
+                                                <th className="p-4 w-1/3">Indikator Soal / Butir Penilaian</th>
+                                                <th className="p-4 w-32">Level Bloom</th>
+                                                <th className="p-4 w-32">Bentuk Soal</th>
+                                                <th className="p-4 w-20 text-center">Bobot (%)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-white/5 text-sm bg-slate-900/40">
+                                            {formData.kisiKisi.map((row, i) => (
+                                                <tr key={i} className="hover:bg-white/5 transition-colors">
+                                                    <td className="p-4 text-center font-bold text-brand-400">{row.no}</td>
+                                                    <td className="p-3">
+                                                        <textarea value={row.tp} onChange={(e) => handleKisiChange(i, 'tp', e.target.value)} rows={3} className="w-full bg-transparent border-none p-1 text-slate-200 resize-none outline-none focus:bg-slate-800 rounded"></textarea>
+                                                    </td>
+                                                    <td className="p-3">
+                                                        <textarea value={row.indikator} onChange={(e) => handleKisiChange(i, 'indikator', e.target.value)} rows={3} className="w-full bg-transparent border-none p-1 text-slate-200 resize-none outline-none focus:bg-slate-800 rounded"></textarea>
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <span className="px-2.5 py-1 rounded-lg bg-brand-500/20 text-brand-300 font-semibold text-xs border border-brand-500/30">{row.level}</span>
+                                                    </td>
+                                                    <td className="p-4 font-medium text-slate-300">{row.bentuk}</td>
+                                                    <td className="p-4 text-center font-bold text-emerald-400">{row.bobot}%</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div className="flex justify-between pt-6 border-t border-white/10">
+                                    <ButtonSecondary onClick={() => setStep(1)}>Kembali</ButtonSecondary>
+                                    <ButtonPrimary onClick={() => setStep(3)} icon="arrow-right">Lanjut ke Bank Soal</ButtonPrimary>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAHAP 3: BANK SOAL PG & ESAI */}
+                        {step === 3 && (
+                            <div className="glass-panel rounded-3xl p-8 space-y-8 no-print">
+                                <div className="border-b border-white/10 pb-5">
+                                    <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
+                                        <i data-lucide="file-text" className="w-6 h-6 text-brand-400"></i>
+                                        <span>Tahap 3: Bank Soal Pilihan Ganda & Uraian HOTS</span>
+                                    </h2>
+                                    <p className="text-sm text-slate-400 mt-1">
+                                        Paket instrumen soal pilihan ganda (5 butir) dan uraian analitis/inovasi (3 butir) beserta kunci dan pedoman penskoran.
+                                    </p>
+                                </div>
+
+                                {/* Bagian PG */}
+                                <div className="space-y-6">
+                                    <h3 className="text-md font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2 border-l-4 border-amber-400 pl-3">
+                                        <span>A. Soal Pilihan Ganda (Multiple Choice) & Kunci Jawaban</span>
+                                    </h3>
+                                    
+                                    <div className="grid grid-cols-1 gap-6">
+                                        {formData.soalPG.map((item, idx) => (
+                                            <div key={idx} className="glass-card p-6 rounded-2xl space-y-4">
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <span className="bg-brand-600 text-white font-bold px-3 py-1 rounded-lg text-xs">Soal No. {item.no}</span>
+                                                    <span className="text-xs text-slate-400 font-mono">Bobot: 20 Poin</span>
+                                                </div>
+                                                <p className="text-sm font-semibold text-slate-100 leading-relaxed whitespace-pre-line">{item.soal}</p>
+                                                
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-2">
+                                                    {item.opsi.map((opt, oIdx) => (
+                                                        <div key={oIdx} className={`p-3 rounded-xl text-xs font-medium border ${opt.startsWith(item.kunci) ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300' : 'bg-slate-900/50 border-white/5 text-slate-300'}`}>
+                                                            {opt}
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                <div className="mt-3 p-3 rounded-xl bg-slate-900/80 border border-white/5 text-xs text-slate-300 flex flex-col gap-1">
+                                                    <div className="font-bold text-emerald-400 flex items-center gap-1.5">
+                                                        <i data-lucide="check-circle" className="w-3.5 h-3.5"></i>
+                                                        <span>Kunci Jawaban: {item.kunci}</span>
+                                                    </div>
+                                                    <p className="text-slate-400 mt-1">{item.pembahasan}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Bagian Uraian */}
+                                <div className="space-y-6 pt-6 border-t border-white/10">
+                                    <h3 className="text-md font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2 border-l-4 border-emerald-400 pl-3">
+                                        <span>B. Soal Uraian / Esai HOTS & Pedoman Penskoran</span>
+                                    </h3>
+
+                                    <div className="grid grid-cols-1 gap-6">
+                                        {formData.soalUraian.map((item, idx) => (
+                                            <div key={idx} className="glass-card p-6 rounded-2xl space-y-4 border-l-2 border-l-emerald-500">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="bg-emerald-600 text-white font-bold px-3 py-1 rounded-lg text-xs">Esai No. {item.no}</span>
+                                                        <span className="bg-slate-800 text-amber-300 font-semibold px-2.5 py-1 rounded-lg text-xs border border-white/10">{item.level}</span>
+                                                    </div>
+                                                    <span className="text-xs font-bold text-emerald-400">Skor Maksimal: {item.skorMaks}</span>
+                                                </div>
+                                                <p className="text-sm font-semibold text-slate-100 leading-relaxed">{item.soal}</p>
+                                                
+                                                <div className="p-4 rounded-xl bg-slate-900/90 border border-white/10 text-xs space-y-2">
+                                                    <span className="font-bold text-brand-400 uppercase tracking-wider block">Rambu-Rambu Jawaban & Kriteria Penskoran:</span>
+                                                    <div className="text-slate-300 whitespace-pre-line leading-relaxed font-mono">{item.rambu}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-between pt-6 border-t border-white/10">
+                                    <ButtonSecondary onClick={() => setStep(2)}>Kembali</ButtonSecondary>
+                                    <ButtonPrimary onClick={() => setStep(4)} icon="arrow-right">Lanjut ke Rubrik Sikap</ButtonPrimary>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAHAP 4: RUBRIK OBSERVASI PMM */}
+                        {step === 4 && (
+                            <div className="glass-panel rounded-3xl p-8 space-y-8 no-print">
+                                <div className="border-b border-white/10 pb-5">
+                                    <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
+                                        <i data-lucide="check-square" className="w-6 h-6 text-brand-400"></i>
+                                        <span>Tahap 4: Rubrik Observasi Kinerja & Sikap Siswa</span>
+                                    </h2>
+                                    <p className="text-sm text-slate-400 mt-1">
+                                        Sinkron dengan indikator PMM <span className="text-emerald-400 font-semibold">{formData.indikatorPMM}</span>: {DATA_PMM[formData.indikatorPMM]}
+                                    </p>
+                                </div>
+
+                                <div className="overflow-x-auto rounded-2xl border border-white/10 shadow-xl">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="bg-slate-900/90 text-slate-300 text-xs uppercase tracking-wider border-b border-white/10">
+                                                <th className="p-4 w-1/5">Aspek Observasi</th>
+                                                <th className="p-4 w-1/5 text-center text-red-400">Baru Memulai (1)</th>
+                                                <th className="p-4 w-1/5 text-center text-amber-400">Berkembang (2)</th>
+                                                <th className="p-4 w-1/5 text-center text-blue-400">Cakap (3)</th>
+                                                <th className="p-4 w-1/5 text-center text-emerald-400">Mahir (4)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-white/5 text-xs bg-slate-900/40 leading-relaxed">
+                                            {formData.rubrikSikap.map((r, i) => (
+                                                <tr key={i} className="hover:bg-white/5 transition-colors">
+                                                    <td className="p-4 font-bold text-slate-200 bg-slate-900/60">{r.aspek}</td>
+                                                    <td className="p-4 text-slate-300">{r.bm}</td>
+                                                    <td className="p-4 text-slate-300">{r.bkg}</td>
+                                                    <td className="p-4 text-slate-300">{r.ckp}</td>
+                                                    <td className="p-4 text-slate-300 font-semibold text-emerald-300">{r.mhr}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div className="glass-card p-5 rounded-2xl border border-white/10 space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Catatan & Instruksi Penilaian Khusus</label>
+                                    <textarea name="catatanUmum" value={formData.catatanUmum} onChange={handleInputChange} rows={3} className="w-full p-3 rounded-xl text-sm outline-none"></textarea>
+                                </div>
+
+                                <div className="flex justify-between pt-6 border-t border-white/10">
+                                    <ButtonSecondary onClick={() => setStep(3)}>Kembali</ButtonSecondary>
+                                    <ButtonPrimary onClick={() => setStep(5)} icon="printer">Pratinjau Siap Cetak (A4)</ButtonPrimary>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAHAP 5: PRATINJAU SIAP CETAK (PRINT-READY) */}
+                        {step === 5 && (
+                            <div className="space-y-8 animate-fade-in">
+                                <div className="glass-panel p-6 rounded-2xl flex items-center justify-between no-print border border-emerald-500/30 bg-emerald-950/20">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">A4</div>
+                                        <div>
+                                            <h3 className="text-sm font-bold text-white">Mode Pratinjau Dokumen Siap Cetak (Print-Ready)</h3>
+                                            <p className="text-xs text-slate-400">Dokumen telah diformat otomatis sesuai standar margin A4 sekolah. Tekan tombol cetak di kanan atas untuk menghasilkan PDF.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <ButtonSecondary onClick={() => setStep(4)}>Sunting Kembali</ButtonSecondary>
+                                        <ButtonPrimary onClick={handlePrint} icon="printer">Cetak Sekarang</ButtonPrimary>
+                                    </div>
+                                </div>
+
+                                {/* LEMBAR 1: KISI-KISI & SOAL PG */}
+                                <div className="bg-white text-black p-12 shadow-2xl mx-auto max-w-[210mm] min-h-[297mm] text-[12.5px] leading-[1.6] print-container">
+                                    <div className="text-center border-b-[3px] border-double border-black pb-4 mb-6">
+                                        <h1 className="text-lg font-bold uppercase tracking-wide">KISI-KISI & INSTRUMEN ASESMEN PEMBELAJARAN</h1>
+                                        <h2 className="text-md font-semibold mt-0.5">KURIKULUM MERDEKA BSKAP NO. 046/H/KR/2026</h2>
+                                        <p className="text-[11px] font-normal uppercase mt-1">{formData.sekolah} | TAHUN AJARAN 2026/2027</p>
+                                    </div>
+
+                                    {/* Identitas */}
+                                    <table className="w-full text-left mb-6 text-[12px] border-none">
+                                        <tbody>
+                                            <tr><td className="w-32 font-bold py-0.5">Mata Pelajaran</td><td className="w-4">:</td><td>{selectedMapel}</td><td className="w-32 font-bold">Fase / Kelas</td><td className="w-4">:</td><td>{selectedFase.split(' ')[0]} / {formData.kelas}</td></tr>
+                                            <tr><td className="font-bold py-0.5">Topik Materi</td><td>:</td><td className="font-semibold">{formData.topik}</td><td className="font-bold">Jenis Asesmen</td><td>:</td><td>{formData.jenisAsesmen}</td></tr>
+                                            <tr><td className="font-bold py-0.5">Guru Pengampu</td><td>:</td><td>{formData.guru}</td><td className="font-bold">Fokus PMM</td><td>:</td><td>{formData.indikatorPMM}</td></tr>
+                                        </tbody>
+                                    </table>
+
+                                    {/* 1. Matriks Kisi-Kisi */}
+                                    <div className="mb-8">
+                                        <div className="font-bold bg-slate-100 p-1.5 mb-2 uppercase border border-black text-[12px]">I. MATRIKS KISI-KISI SOAL (EXAM BLUEPRINT)</div>
+                                        <table className="w-full border-collapse border border-black text-[11px]">
+                                            <thead>
+                                                <tr className="bg-slate-100 text-center font-bold">
+                                                    <th className="border border-black p-2 w-8">No</th>
+                                                    <th className="border border-black p-2">Tujuan Pembelajaran</th>
+                                                    <th className="border border-black p-2">Indikator Soal</th>
+                                                    <th className="border border-black p-2 w-24">Level Bloom</th>
+                                                    <th className="border border-black p-2 w-24">Bentuk</th>
+                                                    <th className="border border-black p-2 w-12">Bobot</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {formData.kisiKisi.map((row, i) => (
+                                                    <tr key={i}>
+                                                        <td className="border border-black p-2 text-center font-bold">{row.no}</td>
+                                                        <td className="border border-black p-2">{row.tp}</td>
+                                                        <td className="border border-black p-2">{row.indikator}</td>
+                                                        <td className="border border-black p-2 text-center">{row.level}</td>
+                                                        <td className="border border-black p-2 text-center">{row.bentuk}</td>
+                                                        <td className="border border-black p-2 text-center font-bold">{row.bobot}%</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* 2. Soal Pilihan Ganda */}
+                                    <div className="mb-8">
+                                        <div className="font-bold bg-slate-100 p-1.5 mb-3 uppercase border border-black text-[12px]">II. INSTRUMEN SOAL PILIHAN GANDA (PILIH SATU JAWABAN BENAR)</div>
+                                        <div className="space-y-4">
+                                            {formData.soalPG.map((item, idx) => (
+                                                <div key={idx} className="page-break-inside-avoid">
+                                                    <p className="font-semibold">{item.no}. {item.soal}</p>
+                                                    <div className="grid grid-cols-1 gap-1 pl-4 mt-1">
+                                                        {item.opsi.map((opt, oIdx) => (
+                                                            <div key={oIdx} className="text-black">{opt}</div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Tanda Tangan Halaman 1 */}
+                                    <div className="mt-12 flex justify-between text-[12px] font-bold page-break-inside-avoid">
+                                        <div className="text-center w-56">
+                                            <p>Mengetahui,</p>
+                                            <p>Kepala Sekolah</p>
+                                            <br/><br/><br/>
+                                            <p className="border-b border-black inline-block min-w-[160px] pb-0.5">{formData.kepalaSekolah}</p>
+                                            <p className="mt-0.5 font-normal text-[11px]">NIP. {formData.nipKepalaSekolah}</p>
+                                        </div>
+                                        <div className="text-center w-56">
+                                            <p>Guru Mata Pelajaran</p>
+                                            <br/><br/><br/>
+                                            <p className="border-b border-black inline-block min-w-[160px] pb-0.5">{formData.guru}</p>
+                                            <p className="mt-0.5 font-normal text-[11px]">NIP. {formData.nipGuru}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* LEMBAR 2: SOAL ESAI, KUNCI, & RUBRIK OBSERVASI */}
+                                <div className="bg-white text-black p-12 shadow-2xl mx-auto max-w-[210mm] min-h-[297mm] page-break mt-10 text-[12.5px] leading-[1.6] print-container">
+                                    <div className="text-center border-b-[3px] border-double border-black pb-3 mb-6">
+                                        <h1 className="text-lg font-bold uppercase tracking-wide">LAMPIRAN KUNCI JAWABAN & RUBRIK OBSERVASI</h1>
+                                        <p className="text-[11px] font-semibold uppercase mt-0.5">{formData.sekolah} | TOPIK: {formData.topik}</p>
+                                    </div>
+
+                                    {/* 3. Soal Uraian */}
+                                    <div className="mb-8">
+                                        <div className="font-bold bg-slate-100 p-1.5 mb-3 uppercase border border-black text-[12px]">III. SOAL URAIAN (ESAI HOTS) & PEDOMAN PENSKORAN</div>
+                                        <div className="space-y-5">
+                                            {formData.soalUraian.map((item, idx) => (
+                                                <div key={idx} className="page-break-inside-avoid border-b border-gray-300 pb-4">
+                                                    <div className="flex justify-between font-bold">
+                                                        <span>{item.no}. [{item.level}]</span>
+                                                        <span>Skor Maksimal: {item.skorMaks} Poin</span>
+                                                    </div>
+                                                    <p className="font-semibold mt-1">{item.soal}</p>
+                                                    <div className="mt-2 bg-gray-50 p-2.5 border border-gray-400 text-[11px]">
+                                                        <span className="font-bold underline">Rambu-Rambu Jawaban & Kriteria Skor:</span>
+                                                        <div className="whitespace-pre-line mt-1 font-mono">{item.rambu}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* 4. Kunci Jawaban PG */}
+                                    <div className="mb-8 page-break-inside-avoid">
+                                        <div className="font-bold bg-slate-100 p-1.5 mb-2 uppercase border border-black text-[12px]">IV. KUNCI JAWABAN & PEMBAHASAN PILIHAN GANDA</div>
+                                        <table className="w-full border-collapse border border-black text-[11px]">
+                                            <thead>
+                                                <tr className="bg-slate-100 text-center font-bold">
+                                                    <th className="border border-black p-2 w-12">No</th>
+                                                    <th className="border border-black p-2 w-16">Kunci</th>
+                                                    <th className="border border-black p-2">Pembahasan Konseptual</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {formData.soalPG.map((item, idx) => (
+                                                    <tr key={idx}>
+                                                        <td className="border border-black p-2 text-center font-bold">{item.no}</td>
+                                                        <td className="border border-black p-2 text-center font-bold text-emerald-800">{item.kunci}</td>
+                                                        <td className="border border-black p-2 leading-normal">{item.pembahasan}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* 5. Rubrik Observasi */}
+                                    <div className="mb-8 page-break-inside-avoid">
+                                        <div className="font-bold bg-slate-100 p-1.5 mb-2 uppercase border border-black text-[12px]">V. RUBRIK OBSERVASI SIKAP & KINERJA (SINKRON PMM: {formData.indikatorPMM.toUpperCase()})</div>
+                                        <table className="w-full border-collapse border border-black text-[10.5px]">
+                                            <thead>
+                                                <tr className="bg-slate-100 text-center font-bold">
+                                                    <th className="border border-black p-2 w-1/5">Aspek Observasi</th>
+                                                    <th className="border border-black p-2 w-1/5">Baru Memulai (1)</th>
+                                                    <th className="border border-black p-2 w-1/5">Berkembang (2)</th>
+                                                    <th className="p-2 border border-black w-1/5">Cakap (3)</th>
+                                                    <th className="border border-black p-2 w-1/5">Mahir (4)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {formData.rubrikSikap.map((r, i) => (
+                                                    <tr key={i}>
+                                                        <td className="border border-black p-2 font-bold bg-gray-50">{r.aspek}</td>
+                                                        <td className="border border-black p-2">{r.bm}</td>
+                                                        <td className="border border-black p-2">{r.bkg}</td>
+                                                        <td className="border border-black p-2">{r.ckp}</td>
+                                                        <td className="border border-black p-2 font-semibold">{r.mhr}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                        <div className="mt-2 p-2.5 border border-black text-[11px] bg-gray-50">
+                                            <span className="font-bold">Catatan Penilaian: </span>
+                                            <span>{formData.catatanUmum}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Tanda Tangan Halaman 2 */}
+                                    <div className="mt-12 flex justify-between text-[12px] font-bold page-break-inside-avoid">
+                                        <div className="text-center w-56">
+                                            <p>Mengetahui,</p>
+                                            <p>Kepala Sekolah</p>
+                                            <br/><br/><br/>
+                                            <p className="border-b border-black inline-block min-w-[160px] pb-0.5">{formData.kepalaSekolah}</p>
+                                            <p className="mt-0.5 font-normal text-[11px]">NIP. {formData.nipKepalaSekolah}</p>
+                                        </div>
+                                        <div className="text-center w-56">
+                                            <p>Guru Mata Pelajaran</p>
+                                            <br/><br/><br/>
+                                            <p className="border-b border-black inline-block min-w-[160px] pb-0.5">{formData.guru}</p>
+                                            <p className="mt-0.5 font-normal text-[11px]">NIP. {formData.nipGuru}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* FLOATING AUTHOR SIGNATURE */}
+                    <div className="fixed bottom-6 right-6 z-50 no-print group">
+                        <div className="bg-[#0b111d]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex flex-col gap-2.5 shadow-[0_10px_40px_rgba(0,0,0,0.8)] hover:border-white/20 hover:-translate-y-1 transition-all duration-300">
+                            <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold px-1 group-hover:text-brand-400 transition-colors">Crafted By</div>
+                            <div className="flex items-center gap-3 bg-white/5 px-3 py-2.5 rounded-xl border border-white/5 cursor-default hover:bg-white/10 transition-colors">
+                                <i data-lucide="gamepad-2" className="w-4 h-4 text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]"></i>
+                                <span className="text-xs font-bold text-slate-200 tracking-wide">nazure_02</span>
+                            </div>
+                            <a href="https://instagram.com/purwaumbara" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-white/5 px-3 py-2.5 rounded-xl border border-white/5 hover:bg-white/10 hover:border-pink-500/50 transition-colors">
+                                <i data-lucide="instagram" className="w-4 h-4 text-pink-400 drop-shadow-[0_0_8px_rgba(244,114,182,0.8)]"></i>
+                                <span className="text-xs font-bold text-slate-200 tracking-wide">@purwaumbara</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

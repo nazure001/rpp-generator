@@ -492,6 +492,123 @@
                 setFormData(prev => ({...prev, troubleshooting: newArr}));
             };
 
+            const handleExportJSON = () => {
+                const exportData = {
+                    appName: "Smart RPP Generator Pro",
+                    exportType: "lesson_plan",
+                    exportedAt: new Date().toISOString(),
+                    school: formData.sekolah || "",
+                    teacher: formData.guru || "",
+                    principal: formData.kepalaSekolah || "",
+                    subject: selectedMapel || formData.mapel || "",
+                    grade: formData.kelas || "",
+                    phase: selectedFase || "",
+                    semester: formData.kelas || "",
+                    topic: formData.topik || "",
+                    curriculumElement: selectedElemen || "",
+                    capaianPembelajaran: DATABASE_KURIKULUM[selectedFase]?.[selectedMapel]?.[selectedElemen] || "",
+                    tujuanPembelajaran: formData.tujuanPembelajaran || "",
+                    lingkupMateri: formData.lingkupMateri || "",
+                    learningReadiness: {
+                        konsep: formData.kesiapanKonsep || "",
+                        teknis: formData.kesiapanTeknis || "",
+                        mental: formData.kesiapanMental || ""
+                    },
+                    learningActivities: {
+                        introduction: formData.kegiatanAwal || "",
+                        core: {
+                            memahami: formData.kegiatanInti1 || "",
+                            mengaplikasi: formData.kegiatanInti2 || "",
+                            merefleksi: formData.kegiatanInti3 || ""
+                        },
+                        closing: formData.kegiatanPenutup || ""
+                    },
+                    assessmentPlan: {
+                        awal: formData.asesmenAwal || "",
+                        formatif: formData.asesmenFormatif || "",
+                        sumatif: formData.asesmenSumatif || ""
+                    },
+                    instruments: {
+                        awal: formData.instrumenAwal || "",
+                        formatifAspek: formData.instrumenFormatifAspek || "",
+                        formatifLegend: formData.instrumenFormatifLegend || "",
+                        sumatif: formData.instrumenSumatif || ""
+                    },
+                    pmmIndicator: (formData.indikator || "") + (formData.fokusPMM ? ` (${formData.fokusPMM})` : ""),
+                    learningModel: formData.metode || ""
+                };
+
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const downloadAnchor = document.createElement("a");
+                downloadAnchor.href = url;
+                const slugify = (str) => (str || "untitled").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+                const dateStr = new Date().toISOString().split("T")[0];
+                downloadAnchor.download = `lesson-plan-${slugify(selectedMapel || formData.mapel)}-${slugify(formData.topik)}-${dateStr}.json`;
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                document.body.removeChild(downloadAnchor);
+                URL.revokeObjectURL(url);
+            };
+
+            const handleExportDraftAsesmen = () => {
+                const slugify = (str) => (str || "untitled").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+                const dateStr = new Date().toISOString().split("T")[0];
+                const draftData = {
+                    assessmentId: `asm-draft-${Date.now()}`,
+                    source: {
+                        type: "lesson_plan_export",
+                        app: "Smart RPP Generator Pro"
+                    },
+                    metadata: {
+                        school: formData.sekolah || "",
+                        teacher: formData.guru || "",
+                        subject: selectedMapel || formData.mapel || "",
+                        grade: formData.kelas || "",
+                        phase: selectedFase || "",
+                        semester: formData.kelas || "",
+                        topic: formData.topik || "",
+                        curriculumElement: selectedElemen || "",
+                        academicYear: ""
+                    },
+                    curriculumReference: {
+                        capaianPembelajaran: DATABASE_KURIKULUM[selectedFase]?.[selectedMapel]?.[selectedElemen] || "",
+                        tujuanPembelajaran: formData.tujuanPembelajaran || "",
+                        lingkupMateri: formData.lingkupMateri || ""
+                    },
+                    assessmentPlan: {
+                        diagnostic: formData.asesmenAwal || "",
+                        formative: formData.asesmenFormatif || "",
+                        summative: formData.asesmenSumatif || ""
+                    },
+                    teacherPreferences: {
+                        questionCount: 0,
+                        questionTypes: [],
+                        cognitiveLevels: ["C2", "C3", "C4"],
+                        useIllustration: false,
+                        languageStyle: "Bahasa Indonesia formal, jelas, sesuai peserta didik SMP"
+                    },
+                    blueprint: [],
+                    questions: [],
+                    answerKey: [],
+                    scoringRules: [],
+                    validationReport: {
+                        status: "DRAFT",
+                        notes: []
+                    }
+                };
+
+                const blob = new Blob([JSON.stringify(draftData, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const downloadAnchor = document.createElement("a");
+                downloadAnchor.href = url;
+                downloadAnchor.download = `assessment-draft-${slugify(selectedMapel || formData.mapel)}-${slugify(formData.topik)}-${dateStr}.json`;
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                document.body.removeChild(downloadAnchor);
+                URL.revokeObjectURL(url);
+            };
+
             useEffect(() => { lucide.createIcons(); });
 
             const formatText = (text) => {
@@ -734,7 +851,14 @@
                                         </div>
                                         <AreaGroup label="3. Detail Instrumen Sumatif" name="instrumenSumatif" val={formData.instrumenSumatif} change={handleInputChange} rows={5} />
                                     </div>
-                                    <div className="flex justify-between pt-6 border-t border-slate-700/50"><ButtonSecondary onClick={() => setStep(4)}>Kembali</ButtonSecondary><ButtonPrimary onClick={() => setIsGenerated(true)} icon="printer">Generate PDF & Tampilkan</ButtonPrimary></div>
+                                    <div className="flex justify-between pt-6 border-t border-slate-700/50">
+                                        <ButtonSecondary onClick={() => setStep(4)}>Kembali</ButtonSecondary>
+                                        <div className="flex gap-3 flex-wrap items-center">
+                                            <button onClick={handleExportJSON} type="button" className="bg-brand-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-brand-500 shadow-lg transition-all"><i data-lucide="download" className="w-5 h-5"></i> Export JSON RPP</button>
+                                            <button onClick={handleExportDraftAsesmen} type="button" className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-emerald-500 shadow-lg transition-all"><i data-lucide="file-check" className="w-5 h-5"></i> Export Draft Asesmen</button>
+                                            <ButtonPrimary onClick={() => setIsGenerated(true)} icon="printer">Generate PDF & Tampilkan</ButtonPrimary>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -744,7 +868,9 @@
                             <div className="pb-20 animate-fade-in">
                                 <div className="flex justify-between items-center mb-8 no-print glass-panel p-6 rounded-2xl">
                                     <h2 className="text-2xl font-bold text-white">Dokumen RPP Siap Cetak</h2>
-                                    <div className="flex gap-4">
+                                    <div className="flex gap-3 flex-wrap">
+                                        <button onClick={handleExportJSON} className="bg-brand-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-brand-500 shadow-lg"><i data-lucide="download" className="w-5 h-5"></i> Export JSON RPP</button>
+                                        <button onClick={handleExportDraftAsesmen} className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-emerald-500 shadow-lg"><i data-lucide="file-check" className="w-5 h-5"></i> Export Draft Asesmen</button>
                                         <button onClick={() => window.print()} className="bg-white text-slate-900 px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-200 shadow-lg"><i data-lucide="printer" className="w-5 h-5"></i> Cetak Dokumen</button>
                                         <button onClick={() => setIsGenerated(false)} className="bg-slate-800 text-white border border-slate-600 px-6 py-2.5 rounded-xl font-bold hover:bg-slate-700"><i data-lucide="edit" className="w-5 h-5 inline mr-2"></i>Edit Kembali</button>
                                     </div>

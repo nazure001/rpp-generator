@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://assessmenthub.ai/schemas/export.schema.json",
+  "title": "ExportPayload",
+  "description": "Data skema payload ekspor output untuk integrasi Google Form, Google Docs, dan Google Drive Organizer.",
+  "type": "object",
+  "properties": {
+    "exportId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "ID unik untuk proses ekspor dokumen ini."
+    },
+    "assessmentId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "ID paket asesmen rujukan (dari assessment.schema.json)."
+    },
+    "googleForm": {
+      "type": "object",
+      "description": "Konfigurasi dan hasil pembentukan Google Form via Apps Script.",
+      "properties": {
+        "formId": { "type": "string" },
+        "formUrl": { "type": "string", "format": "uri" },
+        "responderUri": { "type": "string", "format": "uri" },
+        "isQuizEnabled": { "type": "boolean" },
+        "totalPoints": { "type": "number" }
+      }
+    },
+    "kisiKisiDocument": {
+      "type": "object",
+      "description": "Konfigurasi ekspor berkas kisi-kisi soal (Exam Blueprint).",
+      "properties": {
+        "documentId": { "type": "string" },
+        "documentUrl": { "type": "string", "format": "uri" },
+        "format": { "type": "string", "enum": ["PDF", "Google Docs", "HTML"] }
+      }
+    },
+    "studentQuestionDocument": {
+      "type": "object",
+      "description": "Konfigurasi ekspor naskah soal siswa (tanpa kunci jawaban).",
+      "properties": {
+        "documentId": { "type": "string" },
+        "documentUrl": { "type": "string", "format": "uri" },
+        "format": { "type": "string", "enum": ["PDF", "Google Docs", "HTML"] }
+      }
+    },
+    "answerKeyDocument": {
+      "type": "object",
+      "description": "Konfigurasi ekspor berkas kunci jawaban dan pedoman penskoran guru.",
+      "properties": {
+        "documentId": { "type": "string" },
+        "documentUrl": { "type": "string", "format": "uri" },
+        "format": { "type": "string", "enum": ["PDF", "Google Docs", "HTML"] }
+      }
+    },
+    "analysisSheet": {
+      "type": "object",
+      "description": "Konfigurasi spreadsheet analisis hasil asesmen dan diagnosis miskonsepsi.",
+      "properties": {
+        "spreadsheetId": { "type": "string" },
+        "spreadsheetUrl": { "type": "string", "format": "uri" },
+        "sheetName": { "type": "string" }
+      }
+    },
+    "driveFolders": {
+      "type": "object",
+      "description": "Struktur folder dan pengarsipan di Google Drive melalui Drive Organizer GAS.",
+      "properties": {
+        "rootFolderId": { "type": "string" },
+        "subjectFolderId": { "type": "string" },
+        "evidenceFolderId": { "type": "string" },
+        "folderPath": { "type": "string" }
+      }
+    },
+    "evidenceTags": {
+      "type": "array",
+      "description": "Daftar tag pemetaan bukti akreditasi sekolah atau observasi PMM.",
+      "items": { "type": "string" }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Waktu eksekusi ekspor dalam format ISO 8601."
+    }
+  },
+  "required": [
+    "exportId",
+    "assessmentId",
+    "createdAt"
+  ],
+  "additionalProperties": true
+}
