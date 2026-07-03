@@ -1,0 +1,7 @@
+{
+  "randomKey": "this is not a valid lesson plan or assessment draft",
+  "someData": 12345,
+  "nestedObject": {
+    "foo": "bar"
+  }
+}

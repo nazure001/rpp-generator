@@ -374,8 +374,11 @@
             const [selectedMapel, setSelectedMapel] = useState("Ilmu Pengetahuan Alam (IPA)");
             const [selectedCP, setSelectedCP] = useState("");
 
+            const [importStatus, setImportStatus] = useState({ type: null, message: "" });
+            const [importedDraft, setImportedDraft] = useState(null);
+
             const [formData, setFormData] = useState({
-                sekolah: "SMP Negeri 1 Merdeka Belajar",
+                sekolah: "SMP Negeri 2 Karangtengah",
                 guru: "Purwa Umbara, S.Pd.",
                 nipGuru: "19880101 201001 1 001",
                 kepalaSekolah: "Dr. H. Ahmad Sudirman, M.Pd.",
@@ -385,6 +388,13 @@
                 jenisAsesmen: "Paket Komprehensif (Diagnostik, Formatif, Sumatif)",
                 bloom: "C4 - Menganalisis / HOTS (Analyzing)",
                 indikatorPMM: "Disiplin Positif",
+                curriculumElement: "",
+                capaianPembelajaran: "",
+                tujuanPembelajaran: "",
+                lingkupMateri: "",
+                asesmenAwal: "",
+                asesmenFormatif: "",
+                asesmenSumatif: "",
                 
                 // Generated Content
                 kisiKisi: [],
@@ -394,9 +404,20 @@
                 catatanUmum: "Instrumen asesmen ini dirancang berbasis prinsip Deep Learning dan pedoman asesmen Kurikulum Merdeka BSKAP No. 046/H/KR/2026."
             });
 
+            const generateUUID = () => {
+                if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                    return crypto.randomUUID();
+                }
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    const r = Math.random() * 16 | 0;
+                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            };
+
             // Update Mapel options when Fase changes
             useEffect(() => {
-                if (DATABASE_KURIKULUM[selectedFase]) {
+                if (!importedDraft && DATABASE_KURIKULUM[selectedFase]) {
                     const firstMapel = Object.keys(DATABASE_KURIKULUM[selectedFase])[0];
                     setSelectedMapel(firstMapel);
                 }
@@ -404,7 +425,7 @@
 
             // Update CP when Mapel changes
             useEffect(() => {
-                if (DATABASE_KURIKULUM[selectedFase] && DATABASE_KURIKULUM[selectedFase][selectedMapel]) {
+                if (!importedDraft && DATABASE_KURIKULUM[selectedFase] && DATABASE_KURIKULUM[selectedFase][selectedMapel]) {
                     const elem = DATABASE_KURIKULUM[selectedFase][selectedMapel];
                     const firstElemKey = Object.keys(elem)[0];
                     setSelectedCP(`${firstElemKey}: ${elem[firstElemKey]}`);
@@ -413,7 +434,53 @@
 
             // Trigger generation whenever parameters change
             useEffect(() => {
-                const kisi = AssessmentEngine.generateKisiKisi(selectedFase, selectedMapel, formData.topik, formData.bloom, selectedCP);
+                let kisi = AssessmentEngine.generateKisiKisi(selectedFase, selectedMapel, formData.topik, formData.bloom, selectedCP);
+                if (importedDraft) {
+                    if (Array.isArray(importedDraft.blueprint) && importedDraft.blueprint.length > 0) {
+                        kisi = importedDraft.blueprint.map((item, idx) => ({
+                            no: item.number || item.no || idx + 1,
+                            tp: item.tujuanPembelajaran || item.tp || formData.tujuanPembelajaran || `Tujuan Pembelajaran ${idx + 1}`,
+                            materi: item.materi || formData.lingkupMateri || formData.topik,
+                            indikator: item.indicator || item.indikator || `Indikator soal untuk ${formData.topik}`,
+                            indicator: item.indicator || item.indikator || `Indikator soal untuk ${formData.topik}`,
+                            level: item.cognitiveLevel || item.bloomLevel || item.level || "C3 (Mengaplikasikan)",
+                            cognitiveLevel: item.cognitiveLevel || item.bloomLevel || item.level || "C3 (Mengaplikasikan)",
+                            bentuk: item.questionType || item.bentuk || "Pilihan Ganda (PG)",
+                            questionType: item.questionType || item.bentuk || "Pilihan Ganda (PG)",
+                            bobot: String(item.weight || item.bobot || "20").replace("%", ""),
+                            weight: Number(String(item.weight || item.bobot || "20").replace("%", "")) || 20,
+                            estimatedQuestionCount: item.estimatedQuestionCount || 2
+                        }));
+                    } else if (formData.kisiKisi && formData.kisiKisi.length > 0 && formData.kisiKisi[0].indicator) {
+                        kisi = formData.kisiKisi;
+                    } else {
+                        const initialBP = generateInitialBlueprintFromDraft(importedDraft);
+                        kisi = initialBP.map((item) => ({
+                            no: item.no,
+                            tp: item.tp,
+                            materi: item.materi,
+                            indikator: item.indicator,
+                            indicator: item.indicator,
+                            level: item.cognitiveLevel,
+                            cognitiveLevel: item.cognitiveLevel,
+                            bentuk: item.questionType,
+                            questionType: item.questionType,
+                            bobot: String(item.weight),
+                            weight: item.weight,
+                            estimatedQuestionCount: item.estimatedQuestionCount
+                        }));
+                    }
+                } else {
+                    kisi = kisi.map((item, idx) => ({
+                        ...item,
+                        materi: formData.lingkupMateri || formData.topik,
+                        indicator: item.indikator,
+                        cognitiveLevel: item.level,
+                        questionType: item.bentuk,
+                        weight: Number(String(item.bobot).replace(/[^0-9]/g, "")) || 20,
+                        estimatedQuestionCount: 2
+                    }));
+                }
                 const pg = AssessmentEngine.generateSoalPG(formData.topik, selectedMapel, formData.bloom);
                 const uraian = AssessmentEngine.generateSoalUraian(formData.topik, selectedMapel, formData.bloom);
                 const rubrik = AssessmentEngine.generateRubrikSikap(formData.indikatorPMM);
@@ -425,11 +492,11 @@
                     soalUraian: uraian,
                     rubrikSikap: rubrik
                 }));
-            }, [selectedFase, selectedMapel, formData.topik, formData.bloom, formData.indikatorPMM, selectedCP]);
+            }, [selectedFase, selectedMapel, formData.topik, formData.bloom, formData.indikatorPMM, selectedCP, importedDraft]);
 
             useEffect(() => {
                 if (window.lucide) window.lucide.createIcons();
-            }, [step]);
+            }, [step, importStatus]);
 
             const handleInputChange = (e) => {
                 const { name, value } = e.target;
@@ -444,7 +511,469 @@
             const handleKisiChange = (index, field, value) => {
                 const updated = [...formData.kisiKisi];
                 updated[index][field] = value;
+                if (field === 'indikator') updated[index].indicator = value;
+                if (field === 'level') updated[index].cognitiveLevel = value;
+                if (field === 'bentuk') updated[index].questionType = value;
+                if (field === 'bobot') updated[index].weight = Number(String(value).replace(/[^0-9]/g, "")) || 20;
                 setFormData(prev => ({ ...prev, kisiKisi: updated }));
+            };
+
+            const readJsonFile = (file) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const data = JSON.parse(event.target.result);
+                            resolve(data);
+                        } catch (err) {
+                            reject(new Error("File bukan JSON yang valid atau file rusak."));
+                        }
+                    };
+                    reader.onerror = () => {
+                        reject(new Error("Gagal membaca file. Pastikan file tidak rusak."));
+                    };
+                    reader.readAsText(file);
+                });
+            };
+
+            const validateAssessmentDraft = (data) => {
+                const errors = [];
+                if (!data || typeof data !== 'object') {
+                    return { isValid: false, errors: ["Format JSON bukan object yang valid."] };
+                }
+                const checkProp = (obj, prop, path) => {
+                    if (!obj || !(prop in obj) || obj[prop] === undefined || obj[prop] === null) {
+                        errors.push(path);
+                    }
+                };
+                checkProp(data, 'assessmentId', 'assessmentId');
+                checkProp(data, 'metadata', 'metadata');
+                if (data.metadata) {
+                    checkProp(data.metadata, 'school', 'metadata.school');
+                    checkProp(data.metadata, 'teacher', 'metadata.teacher');
+                    checkProp(data.metadata, 'subject', 'metadata.subject');
+                    checkProp(data.metadata, 'grade', 'metadata.grade');
+                    checkProp(data.metadata, 'phase', 'metadata.phase');
+                    checkProp(data.metadata, 'semester', 'metadata.semester');
+                    checkProp(data.metadata, 'topic', 'metadata.topic');
+                }
+                checkProp(data, 'curriculumReference', 'curriculumReference');
+                if (data.curriculumReference) {
+                    checkProp(data.curriculumReference, 'capaianPembelajaran', 'curriculumReference.capaianPembelajaran');
+                    checkProp(data.curriculumReference, 'tujuanPembelajaran', 'curriculumReference.tujuanPembelajaran');
+                    checkProp(data.curriculumReference, 'lingkupMateri', 'curriculumReference.lingkupMateri');
+                }
+                checkProp(data, 'assessmentPlan', 'assessmentPlan');
+                checkProp(data, 'teacherPreferences', 'teacherPreferences');
+                checkProp(data, 'validationReport', 'validationReport');
+                if (data.validationReport) {
+                    checkProp(data.validationReport, 'status', 'validationReport.status');
+                }
+                return {
+                    isValid: errors.length === 0,
+                    errors
+                };
+            };
+
+            // --- TYPE DETECTION ---
+            const detectImportedJsonType = (data) => {
+                if (!data || typeof data !== 'object') return "unknown";
+
+                const hasAssessmentDraftFields =
+                    'assessmentId' in data &&
+                    'metadata' in data &&
+                    'curriculumReference' in data;
+
+                if (hasAssessmentDraftFields) return "assessment_draft";
+
+                const hasLessonPlanId = 'lessonPlanId' in data;
+                const hasExportTypeLessonPlan = data.exportType === "lesson_plan";
+                const hasLessonPlanFields =
+                    ('school' in data || 'teacher' in data) &&
+                    'subject' in data &&
+                    ('grade' in data || 'semester' in data) &&
+                    'topic' in data &&
+                    'assessmentPlan' in data;
+
+                if (hasLessonPlanId || hasExportTypeLessonPlan || hasLessonPlanFields) return "lesson_plan";
+
+                return "unknown";
+            };
+
+            // --- LESSON PLAN TO ASSESSMENT DRAFT CONVERTER ---
+            const convertLessonPlanToAssessmentDraft = (lp) => {
+                const id = lp.lessonPlanId
+                    ? `assessment-from-${lp.lessonPlanId}`
+                    : generateUUID();
+
+                const plan = lp.assessmentPlan || {};
+
+                return {
+                    assessmentId: id,
+                    source: {
+                        type: "lesson_plan_export",
+                        app: lp.appName || "Smart RPP Generator Pro",
+                        lessonPlanId: lp.lessonPlanId || ""
+                    },
+                    metadata: {
+                        school: lp.school || "",
+                        teacher: lp.teacher || "",
+                        subject: lp.subject || "",
+                        grade: lp.grade || "",
+                        phase: lp.phase || "",
+                        semester: lp.semester || "",
+                        topic: lp.topic || "",
+                        curriculumElement: lp.curriculumElement || "",
+                        academicYear: lp.academicYear || ""
+                    },
+                    curriculumReference: {
+                        capaianPembelajaran: lp.capaianPembelajaran || "",
+                        tujuanPembelajaran: lp.tujuanPembelajaran || "",
+                        lingkupMateri: lp.lingkupMateri || ""
+                    },
+                    assessmentPlan: {
+                        diagnostic: plan.awal || plan.diagnostic || "",
+                        formative: plan.formatif || plan.formative || "",
+                        summative: plan.sumatif || plan.summative || ""
+                    },
+                    teacherPreferences: {
+                        questionCount: 0,
+                        questionTypes: ["pilihan_ganda", "pg_kompleks", "uraian"],
+                        cognitiveLevels: ["C2", "C3", "C4"],
+                        useIllustration: false,
+                        languageStyle: "Bahasa Indonesia formal, jelas, sesuai peserta didik SMP"
+                    },
+                    blueprint: [],
+                    questions: [],
+                    answerKey: [],
+                    scoringRules: [],
+                    validationReport: {
+                        status: "DRAFT",
+                        notes: ["Converted from lesson-plan JSON export."]
+                    }
+                };
+            };
+
+            const normalizeImportedDraft = (data) => {
+                const normalized = JSON.parse(JSON.stringify(data));
+                if (!normalized.teacherPreferences) normalized.teacherPreferences = {};
+                if (!Array.isArray(normalized.teacherPreferences.questionTypes) || normalized.teacherPreferences.questionTypes.length === 0) {
+                    normalized.teacherPreferences.questionTypes = ["pilihan_ganda", "pg_kompleks", "uraian"];
+                }
+                if (!Array.isArray(normalized.teacherPreferences.cognitiveLevels) || normalized.teacherPreferences.cognitiveLevels.length === 0) {
+                    normalized.teacherPreferences.cognitiveLevels = ["C2", "C3", "C4"];
+                }
+                return normalized;
+            };
+
+            const generateInitialBlueprintFromDraft = (data) => {
+                const curr = data.curriculumReference || {};
+                const meta = data.metadata || {};
+                const pref = data.teacherPreferences || {};
+
+                const tpText = curr.tujuanPembelajaran || `Tujuan Pembelajaran untuk topik ${meta.topic || "Materi"}`;
+                const materiText = curr.lingkupMateri || meta.topic || "Materi Pokok";
+                const cogLevels = (Array.isArray(pref.cognitiveLevels) && pref.cognitiveLevels.length > 0)
+                    ? pref.cognitiveLevels : ["C2", "C3", "C4"];
+                const qTypes = (Array.isArray(pref.questionTypes) && pref.questionTypes.length > 0)
+                    ? pref.questionTypes : ["pilihan_ganda", "pg_kompleks", "uraian"];
+
+                let tpParts = tpText.split(/(?<=[.!?])\s+|;/).map(s => s.trim()).filter(s => s.length > 5);
+                if (tpParts.length === 0) {
+                    tpParts = [tpText];
+                }
+
+                const blueprint = [];
+                const targetRowCount = Math.max(5, tpParts.length);
+                const indicatorVerbs = {
+                    "C1": "mengidentifikasi dan menyebutkan definisi",
+                    "C2": "menjelaskan konsep dasar dan karakteristik",
+                    "C3": "menerapkan prinsip dalam menyelesaikan persoalan atau situasi",
+                    "C4": "menganalisis hubungan antar komponen pada peristiwa",
+                    "C5": "mengevaluasi serta memberikan argumen logis terkait",
+                    "C6": "merancang atau memodifikasi solusi kreatif atas"
+                };
+
+                for (let i = 0; i < targetRowCount; i++) {
+                    const currentTp = tpParts[i % tpParts.length];
+                    const cog = cogLevels[i % cogLevels.length];
+                    const qType = qTypes[i % qTypes.length];
+                    const cogKey = String(cog).substring(0, 2).toUpperCase();
+                    const verb = indicatorVerbs[cogKey] || "mengidentifikasi dan menerapkan konsep";
+                    
+                    const indicator = `Disajikan konteks pembelajaran atau ilustrasi relevan, peserta didik mampu ${verb} ${materiText.toLowerCase()} dengan tepat.`;
+                    
+                    blueprint.push({
+                        no: i + 1,
+                        tp: currentTp,
+                        materi: materiText,
+                        indicator: indicator,
+                        cognitiveLevel: cog,
+                        questionType: qType,
+                        weight: Math.round(100 / targetRowCount),
+                        estimatedQuestionCount: qType === 'uraian' ? 1 : 2
+                    });
+                }
+
+                const totalW = blueprint.reduce((acc, row) => acc + row.weight, 0);
+                if (totalW !== 100 && blueprint.length > 0) {
+                    blueprint[0].weight += (100 - totalW);
+                }
+
+                return blueprint;
+            };
+
+            const applyImportedDraft = (data, isFromLessonPlan = false) => {
+                const normalized = normalizeImportedDraft(data);
+                const meta = normalized.metadata || {};
+                const curr = normalized.curriculumReference || {};
+                const plan = normalized.assessmentPlan || {};
+
+                const schoolVal = meta.school || formData.sekolah;
+                const teacherVal = meta.teacher || formData.guru;
+                const subjectVal = meta.subject || selectedMapel;
+                const gradeVal = meta.grade || "";
+                const semesterVal = meta.semester || "";
+                const kelasVal = gradeVal && semesterVal ? `${gradeVal} / ${semesterVal}` : (gradeVal || semesterVal || formData.kelas);
+                const phaseVal = meta.phase || selectedFase;
+                const topicVal = meta.topic || formData.topik;
+                const elementVal = meta.curriculumElement || "";
+                const cpVal = curr.capaianPembelajaran || selectedCP;
+                const tpVal = curr.tujuanPembelajaran || "";
+                const lingkupVal = curr.lingkupMateri || "";
+
+                if (phaseVal && DATABASE_KURIKULUM[phaseVal]) {
+                    setSelectedFase(phaseVal);
+                }
+                if (subjectVal && DATABASE_KURIKULUM[phaseVal || selectedFase]?.[subjectVal]) {
+                    setSelectedMapel(subjectVal);
+                }
+                if (cpVal) {
+                    setSelectedCP(cpVal);
+                }
+
+                const bloomVal = (normalized.teacherPreferences && normalized.teacherPreferences.cognitiveLevels && normalized.teacherPreferences.cognitiveLevels[0]) 
+                    ? (Object.keys(TAKSONOMI_BLOOM).find(k => k.includes(normalized.teacherPreferences.cognitiveLevels[0])) || formData.bloom)
+                    : formData.bloom;
+
+                const initialBlueprint = generateInitialBlueprintFromDraft(normalized);
+
+                setFormData(prev => ({
+                    ...prev,
+                    sekolah: schoolVal,
+                    guru: teacherVal,
+                    kelas: kelasVal,
+                    topik: topicVal,
+                    bloom: bloomVal,
+                    curriculumElement: elementVal,
+                    capaianPembelajaran: cpVal,
+                    tujuanPembelajaran: tpVal,
+                    lingkupMateri: lingkupVal,
+                    asesmenAwal: plan.diagnostic || "",
+                    asesmenFormatif: plan.formative || "",
+                    asesmenSumatif: plan.summative || "",
+                    soalPG: [],
+                    soalUraian: [],
+                    kisiKisi: initialBlueprint.map((item) => ({
+                        no: item.no,
+                        tp: item.tp,
+                        materi: item.materi,
+                        indikator: item.indicator,
+                        indicator: item.indicator,
+                        level: item.cognitiveLevel,
+                        cognitiveLevel: item.cognitiveLevel,
+                        bentuk: item.questionType,
+                        questionType: item.questionType,
+                        bobot: String(item.weight),
+                        weight: item.weight,
+                        estimatedQuestionCount: item.estimatedQuestionCount
+                    }))
+                }));
+
+                setImportedDraft(normalized);
+                setImportStatus({
+                    type: "success",
+                    message: isFromLessonPlan
+                        ? "RPP JSON berhasil dikonversi menjadi draft asesmen dan kisi-kisi awal telah dibuat."
+                        : "Draft asesmen berhasil diimpor dan kisi-kisi awal telah dibuat."
+                });
+            };
+
+            const handleFileImport = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                try {
+                    const data = await readJsonFile(file);
+                    const fileType = detectImportedJsonType(data);
+
+                    if (fileType === "unknown") {
+                        setImportStatus({
+                            type: "error",
+                            message: "Format JSON tidak dikenali. Gunakan file assessment-draft-*.json atau lesson-plan-*.json hasil ekspor aplikasi."
+                        });
+                        return;
+                    }
+
+                    let draftData = data;
+                    let isFromLessonPlan = false;
+
+                    if (fileType === "lesson_plan") {
+                        draftData = convertLessonPlanToAssessmentDraft(data);
+                        isFromLessonPlan = true;
+                    }
+
+                    const validation = validateAssessmentDraft(draftData);
+                    if (!validation.isValid) {
+                        setImportStatus({
+                            type: "error",
+                            message: `Field wajib tidak lengkap: ${validation.errors.join(", ")}.`
+                        });
+                        return;
+                    }
+
+                    applyImportedDraft(draftData, isFromLessonPlan);
+                } catch (err) {
+                    setImportStatus({
+                        type: "error",
+                        message: `Gagal membaca file: ${err.message}`
+                    });
+                }
+            };
+
+            const handleExportFinalJSON = () => {
+                const slugify = (str) => (str || "untitled").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+                const dateStr = new Date().toISOString().split("T")[0];
+                const metaSchool = formData.sekolah || (importedDraft && importedDraft.metadata && importedDraft.metadata.school) || "";
+                const metaSubject = selectedMapel || (importedDraft && importedDraft.metadata && importedDraft.metadata.subject) || "";
+                const metaPhase = selectedFase || (importedDraft && importedDraft.metadata && importedDraft.metadata.phase) || "";
+                const metaGrade = formData.kelas ? formData.kelas.split("/")[0].trim() : ((importedDraft && importedDraft.metadata && importedDraft.metadata.grade) || "");
+                const metaSemesterRaw = formData.kelas && formData.kelas.includes("/") ? formData.kelas.split("/")[1].trim() : ((importedDraft && importedDraft.metadata && importedDraft.metadata.semester) || "Ganjil");
+                const metaSemester = (metaSemesterRaw === "Ganjil" || metaSemesterRaw === "Genap") ? metaSemesterRaw : "Ganjil";
+                const metaTopic = formData.topik || (importedDraft && importedDraft.metadata && importedDraft.metadata.topic) || "Materi";
+                const metaCP = formData.capaianPembelajaran || selectedCP || (importedDraft && importedDraft.curriculumReference && importedDraft.curriculumReference.capaianPembelajaran) || "";
+                const metaTP = formData.tujuanPembelajaran || (importedDraft && importedDraft.curriculumReference && importedDraft.curriculumReference.tujuanPembelajaran) || "";
+
+                const finalData = {
+                    assessmentId: importedDraft ? importedDraft.assessmentId : generateUUID(),
+                    // Flat required fields (assessment.schema.json)
+                    title: `Asesmen Komprehensif: ${metaTopic}`,
+                    school: metaSchool,
+                    subject: metaSubject,
+                    grade: metaGrade,
+                    phase: metaPhase,
+                    semester: metaSemester,
+                    academicYear: "2026/2027",
+                    curriculumReferences: {
+                        cpText: metaCP,
+                        tpList: [metaTP].filter(Boolean),
+                        pmmFocus: formData.indikatorPMM || ""
+                    },
+                    status: "Validated",
+                    // Nested fields (for import round-trip compatibility)
+                    source: importedDraft && importedDraft.source ? importedDraft.source : {
+                        type: "lesson_plan_export",
+                        app: "Smart RPP Generator Pro"
+                    },
+                    metadata: importedDraft && importedDraft.metadata ? importedDraft.metadata : {
+                        school: metaSchool,
+                        teacher: formData.guru || "",
+                        subject: metaSubject,
+                        grade: metaGrade,
+                        phase: metaPhase,
+                        semester: metaSemester,
+                        topic: metaTopic,
+                        curriculumElement: formData.curriculumElement || ""
+                    },
+                    curriculumReference: importedDraft && importedDraft.curriculumReference ? importedDraft.curriculumReference : {
+                        capaianPembelajaran: metaCP,
+                        tujuanPembelajaran: metaTP,
+                        lingkupMateri: formData.lingkupMateri || ""
+                    },
+                    assessmentPlan: importedDraft && importedDraft.assessmentPlan ? importedDraft.assessmentPlan : {
+                        diagnostic: formData.asesmenAwal || "",
+                        formative: formData.asesmenFormatif || "",
+                        summative: formData.asesmenSumatif || ""
+                    },
+                    teacherPreferences: importedDraft && importedDraft.teacherPreferences ? importedDraft.teacherPreferences : {
+                        cognitiveLevels: [formData.bloom || "C4"],
+                        questionTypes: ["pilihan_ganda", "uraian"],
+                        questionCount: formData.soalPG.length + formData.soalUraian.length
+                    },
+                    blueprint: formData.kisiKisi.map((item, idx) => ({
+                        no: item.no || idx + 1,
+                        number: item.no || idx + 1,
+                        tp: item.tp || "",
+                        materi: item.materi || formData.lingkupMateri || formData.topik || "",
+                        indicator: item.indicator || item.indikator || "",
+                        bloomLevel: item.cognitiveLevel || item.level || "",
+                        cognitiveLevel: item.cognitiveLevel || item.level || "",
+                        questionType: item.questionType || item.bentuk || "",
+                        weight: Number(String(item.weight || item.bobot || "20").replace(/[^0-9]/g, "")) || 20,
+                        estimatedQuestionCount: item.estimatedQuestionCount || (String(item.questionType || item.bentuk).toLowerCase().includes("uraian") ? 1 : 2)
+                    })),
+                    questions: importedDraft ? [] : [
+                        ...formData.soalPG.map(q => ({
+                            questionId: generateUUID(),
+                            number: q.no,
+                            type: "multiple_choice",
+                            questionText: q.soal,
+                            options: q.opsi,
+                            correctAnswer: q.kunci,
+                            explanation: q.pembahasan,
+                            cognitiveLevel: formData.bloom || "C4"
+                        })),
+                        ...formData.soalUraian.map(q => ({
+                            questionId: generateUUID(),
+                            number: q.no + formData.soalPG.length,
+                            type: "essay",
+                            questionText: q.soal,
+                            guidelines: q.rambu,
+                            maxScore: q.skorMaks,
+                            cognitiveLevel: q.level || "C5"
+                        }))
+                    ],
+                    answerKey: importedDraft ? [] : [
+                        ...formData.soalPG.map(q => ({
+                            number: q.no,
+                            answer: q.kunci,
+                            explanation: q.pembahasan
+                        })),
+                        ...formData.soalUraian.map(q => ({
+                            number: q.no + formData.soalPG.length,
+                            answer: q.rambu,
+                            explanation: `Skor maksimal: ${q.skorMaks}`
+                        }))
+                    ],
+                    scoringRules: {
+                        maxScore: 100,
+                        passingScoreKKTP: 75,
+                        rubrics: formData.rubrikSikap || []
+                    },
+                    imageAssets: [],
+                    validationReport: importedDraft && importedDraft.validationReport ? {
+                        ...importedDraft.validationReport,
+                        status: "VALIDATED",
+                        isValidated: true
+                    } : {
+                        status: "VALIDATED",
+                        isValidated: true,
+                        warnings: []
+                    },
+                    exportTargets: ["JSON"],
+                    exportedAt: new Date().toISOString(),
+                    appName: "AssessmentHub AI",
+                    exportType: "assessment_final"
+                };
+                const blob = new Blob([JSON.stringify(finalData, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const downloadAnchor = document.createElement("a");
+                downloadAnchor.href = url;
+                downloadAnchor.download = `assessment-final-${slugify(metaSubject || "mapel")}-${slugify(metaTopic || "topik")}-${dateStr}.json`;
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                document.body.removeChild(downloadAnchor);
+                URL.revokeObjectURL(url);
             };
 
             return (
@@ -473,10 +1002,16 @@
                                     <span>Kembali ke RPP Generator</span>
                                 </a>
                                 {step === 5 && (
-                                    <button onClick={handlePrint} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-emerald-600/30 hover:scale-105 transition-all">
-                                        <i data-lucide="printer" className="w-4 h-4"></i>
-                                        <span>Cetak Dokumen / PDF</span>
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={handleExportFinalJSON} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-indigo-600/30 transition-all">
+                                            <i data-lucide="download" className="w-4 h-4"></i>
+                                            <span>Export Assessment Final JSON</span>
+                                        </button>
+                                        <button onClick={handlePrint} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-emerald-600/30 hover:scale-105 transition-all">
+                                            <i data-lucide="printer" className="w-4 h-4"></i>
+                                            <span>Cetak Dokumen / PDF</span>
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -527,6 +1062,53 @@
                                     <p className="text-sm text-slate-400 mt-1">
                                         Pilih jenjang fase, mata pelajaran, dan karakteristik asesmen. Sistem otomatis merumuskan butir soal kontekstual.
                                     </p>
+                                </div>
+
+                                <div className="bg-slate-900/60 border border-brand-500/30 rounded-2xl p-5 space-y-3">
+                                    <div className="flex items-center justify-between flex-wrap gap-3">
+                                        <div>
+                                            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                                                <i data-lucide="upload-cloud" className="w-5 h-5 text-brand-400"></i>
+                                                <span>Import Draft Asesmen JSON</span>
+                                            </h3>
+                                            <p className="text-xs text-slate-400 mt-0.5">
+                                                Unggah file assessment-draft-*.json hasil ekspor dari Smart RPP Generator untuk mengisi metadata dan membuat kisi-kisi awal.
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="cursor-pointer bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-lg shadow-brand-600/30 flex items-center gap-2">
+                                                <i data-lucide="file-input" className="w-4 h-4"></i>
+                                                <span>Pilih Berkas JSON...</span>
+                                                <input type="file" accept=".json,application/json" onChange={handleFileImport} className="hidden" />
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {importStatus.message && (
+                                        <div className={`p-3 rounded-xl text-xs font-medium flex items-center gap-2.5 ${importStatus.type === 'error' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}`}>
+                                            <i data-lucide={importStatus.type === 'error' ? 'alert-circle' : 'check-circle'} className="w-4 h-4 shrink-0"></i>
+                                            <span>{importStatus.message}</span>
+                                        </div>
+                                    )}
+                                    {importStatus.type === 'success' && importedDraft && (
+                                        <div className="bg-slate-900/80 border border-emerald-500/30 rounded-2xl p-4 space-y-3 animate-fade-in text-xs">
+                                            <div className="text-emerald-400 font-bold border-b border-white/10 pb-2 flex items-center gap-2">
+                                                <i data-lucide="file-check" className="w-4 h-4"></i>
+                                                <span>Ringkasan Draft Asesmen Diimpor</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 text-slate-300">
+                                                <div className="bg-white/5 p-2 rounded-lg"><span className="text-slate-400 block mb-0.5">Assessment ID</span><span className="font-mono text-white block truncate" title={importedDraft.assessmentId}>{importedDraft.assessmentId || "-"}</span></div>
+                                                <div className="bg-white/5 p-2 rounded-lg"><span className="text-slate-400 block mb-0.5">School</span><span className="font-bold text-white block truncate" title={importedDraft.metadata?.school}>{importedDraft.metadata?.school || "-"}</span></div>
+                                                <div className="bg-white/5 p-2 rounded-lg"><span className="text-slate-400 block mb-0.5">Teacher</span><span className="font-bold text-white block truncate" title={importedDraft.metadata?.teacher}>{importedDraft.metadata?.teacher || "-"}</span></div>
+                                                <div className="bg-white/5 p-2 rounded-lg"><span className="text-slate-400 block mb-0.5">Subject</span><span className="font-bold text-white block truncate" title={importedDraft.metadata?.subject}>{importedDraft.metadata?.subject || "-"}</span></div>
+                                                <div className="bg-white/5 p-2 rounded-lg"><span className="text-slate-400 block mb-0.5">Grade/Semester</span><span className="font-bold text-white block">{importedDraft.metadata?.grade || "-"} / {importedDraft.metadata?.semester || "-"}</span></div>
+                                                <div className="bg-white/5 p-2 rounded-lg"><span className="text-slate-400 block mb-0.5">Phase</span><span className="font-bold text-white block">{importedDraft.metadata?.phase || "-"}</span></div>
+                                                <div className="bg-white/5 p-2 rounded-lg"><span className="text-slate-400 block mb-0.5">Topic</span><span className="font-bold text-white block truncate" title={importedDraft.metadata?.topic}>{importedDraft.metadata?.topic || "-"}</span></div>
+                                                <div className="bg-white/5 p-2 rounded-lg"><span className="text-slate-400 block mb-0.5">Curriculum Element</span><span className="font-bold text-white block truncate" title={importedDraft.metadata?.curriculumElement}>{importedDraft.metadata?.curriculumElement || "-"}</span></div>
+                                                <div className="bg-white/5 p-2 rounded-lg"><span className="text-slate-400 block mb-0.5">Blueprint Rows</span><span className="font-bold text-emerald-300 block">{formData.kisiKisi?.length || 0} baris</span></div>
+                                                <div className="bg-white/5 p-2 rounded-lg"><span className="text-slate-400 block mb-0.5">Validation Status</span><span className="font-bold text-brand-300 block">{importedDraft.validationReport?.status || "VALIDATED"}</span></div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -776,7 +1358,7 @@
                         {/* TAHAP 5: PRATINJAU SIAP CETAK (PRINT-READY) */}
                         {step === 5 && (
                             <div className="space-y-8 animate-fade-in">
-                                <div className="glass-panel p-6 rounded-2xl flex items-center justify-between no-print border border-emerald-500/30 bg-emerald-950/20">
+                                <div className="glass-panel p-6 rounded-2xl flex items-center justify-between no-print border border-emerald-500/30 bg-emerald-950/20 flex-wrap gap-4">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">A4</div>
                                         <div>
@@ -784,8 +1366,12 @@
                                             <p className="text-xs text-slate-400">Dokumen telah diformat otomatis sesuai standar margin A4 sekolah. Tekan tombol cetak di kanan atas untuk menghasilkan PDF.</p>
                                         </div>
                                     </div>
-                                    <div className="flex gap-2">
+                                    <div className="flex flex-wrap gap-2">
                                         <ButtonSecondary onClick={() => setStep(4)}>Sunting Kembali</ButtonSecondary>
+                                        <button onClick={handleExportFinalJSON} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-indigo-600/30 transition-all">
+                                            <i data-lucide="download" className="w-4 h-4"></i>
+                                            <span>Export Assessment Final JSON</span>
+                                        </button>
                                         <ButtonPrimary onClick={handlePrint} icon="printer">Cetak Sekarang</ButtonPrimary>
                                     </div>
                                 </div>
