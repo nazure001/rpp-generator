@@ -744,25 +744,50 @@
             const handleExportFinalJSON = () => {
                 const slugify = (str) => (str || "untitled").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
                 const dateStr = new Date().toISOString().split("T")[0];
+                const metaSchool = formData.sekolah || (importedDraft && importedDraft.metadata && importedDraft.metadata.school) || "";
+                const metaSubject = selectedMapel || (importedDraft && importedDraft.metadata && importedDraft.metadata.subject) || "";
+                const metaPhase = selectedFase || (importedDraft && importedDraft.metadata && importedDraft.metadata.phase) || "";
+                const metaGrade = formData.kelas ? formData.kelas.split("/")[0].trim() : ((importedDraft && importedDraft.metadata && importedDraft.metadata.grade) || "");
+                const metaSemesterRaw = formData.kelas && formData.kelas.includes("/") ? formData.kelas.split("/")[1].trim() : ((importedDraft && importedDraft.metadata && importedDraft.metadata.semester) || "Ganjil");
+                const metaSemester = (metaSemesterRaw === "Ganjil" || metaSemesterRaw === "Genap") ? metaSemesterRaw : "Ganjil";
+                const metaTopic = formData.topik || (importedDraft && importedDraft.metadata && importedDraft.metadata.topic) || "Materi";
+                const metaCP = formData.capaianPembelajaran || selectedCP || (importedDraft && importedDraft.curriculumReference && importedDraft.curriculumReference.capaianPembelajaran) || "";
+                const metaTP = formData.tujuanPembelajaran || (importedDraft && importedDraft.curriculumReference && importedDraft.curriculumReference.tujuanPembelajaran) || "";
+
                 const finalData = {
                     assessmentId: importedDraft ? importedDraft.assessmentId : generateUUID(),
+                    // Flat required fields (assessment.schema.json)
+                    title: `Asesmen Komprehensif: ${metaTopic}`,
+                    school: metaSchool,
+                    subject: metaSubject,
+                    grade: metaGrade,
+                    phase: metaPhase,
+                    semester: metaSemester,
+                    academicYear: "2026/2027",
+                    curriculumReferences: {
+                        cpText: metaCP,
+                        tpList: [metaTP].filter(Boolean),
+                        pmmFocus: formData.indikatorPMM || ""
+                    },
+                    status: "Validated",
+                    // Nested fields (for import round-trip compatibility)
                     source: importedDraft && importedDraft.source ? importedDraft.source : {
                         type: "lesson_plan_export",
                         app: "Smart RPP Generator Pro"
                     },
                     metadata: importedDraft && importedDraft.metadata ? importedDraft.metadata : {
-                        school: formData.sekolah || "",
+                        school: metaSchool,
                         teacher: formData.guru || "",
-                        subject: selectedMapel || "",
-                        grade: formData.kelas ? formData.kelas.split("/")[0].trim() : "",
-                        phase: selectedFase || "",
-                        semester: formData.kelas && formData.kelas.includes("/") ? formData.kelas.split("/")[1].trim() : "",
-                        topic: formData.topik || "",
+                        subject: metaSubject,
+                        grade: metaGrade,
+                        phase: metaPhase,
+                        semester: metaSemester,
+                        topic: metaTopic,
                         curriculumElement: formData.curriculumElement || ""
                     },
                     curriculumReference: importedDraft && importedDraft.curriculumReference ? importedDraft.curriculumReference : {
-                        capaianPembelajaran: formData.capaianPembelajaran || selectedCP || "",
-                        tujuanPembelajaran: formData.tujuanPembelajaran || "",
+                        capaianPembelajaran: metaCP,
+                        tujuanPembelajaran: metaTP,
                         lingkupMateri: formData.lingkupMateri || ""
                     },
                     assessmentPlan: importedDraft && importedDraft.assessmentPlan ? importedDraft.assessmentPlan : {
@@ -777,9 +802,11 @@
                     },
                     blueprint: formData.kisiKisi.map((item, idx) => ({
                         no: item.no || idx + 1,
+                        number: item.no || idx + 1,
                         tp: item.tp || "",
                         materi: item.materi || formData.lingkupMateri || formData.topik || "",
                         indicator: item.indicator || item.indikator || "",
+                        bloomLevel: item.cognitiveLevel || item.level || "",
                         cognitiveLevel: item.cognitiveLevel || item.level || "",
                         questionType: item.questionType || item.bentuk || "",
                         weight: Number(String(item.weight || item.bobot || "20").replace(/[^0-9]/g, "")) || 20,
@@ -823,6 +850,7 @@
                         passingScoreKKTP: 75,
                         rubrics: formData.rubrikSikap || []
                     },
+                    imageAssets: [],
                     validationReport: importedDraft && importedDraft.validationReport ? {
                         ...importedDraft.validationReport,
                         status: "VALIDATED",
@@ -832,6 +860,7 @@
                         isValidated: true,
                         warnings: []
                     },
+                    exportTargets: ["JSON"],
                     exportedAt: new Date().toISOString(),
                     appName: "AssessmentHub AI",
                     exportType: "assessment_final"
@@ -840,7 +869,7 @@
                 const url = URL.createObjectURL(blob);
                 const downloadAnchor = document.createElement("a");
                 downloadAnchor.href = url;
-                downloadAnchor.download = `assessment-final-${slugify(selectedMapel || "mapel")}-${slugify(formData.topik || "topik")}-${dateStr}.json`;
+                downloadAnchor.download = `assessment-final-${slugify(metaSubject || "mapel")}-${slugify(metaTopic || "topik")}-${dateStr}.json`;
                 document.body.appendChild(downloadAnchor);
                 downloadAnchor.click();
                 document.body.removeChild(downloadAnchor);
