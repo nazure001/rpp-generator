@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://assessmenthub.ai/schemas/lessonPlan.schema.json",
+  "title": "LessonPlan",
+  "description": "Data skema Rencana Pelaksanaan Pembelajaran (RPP) yang dihasilkan oleh RPP Generator untuk dikonsumsi oleh AssessmentHub AI.",
+  "type": "object",
+  "properties": {
+    "lessonPlanId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "ID unik untuk dokumen RPP."
+    },
+    "school": {
+      "type": "string",
+      "description": "Nama satuan pendidikan / sekolah."
+    },
+    "teacher": {
+      "type": "string",
+      "description": "Nama guru pengampu mata pelajaran."
+    },
+    "principal": {
+      "type": "string",
+      "description": "Nama kepala sekolah."
+    },
+    "subject": {
+      "type": "string",
+      "description": "Mata pelajaran (sinkron dengan BSKAP No. 046/H/KR/2026)."
+    },
+    "grade": {
+      "type": "string",
+      "description": "Kelas atau jenjang pendidikan (misalnya: VII, VIII, IX, SMA Kelas 10)."
+    },
+    "phase": {
+      "type": "string",
+      "description": "Fase kurikulum (misalnya: Fase D, Fase E)."
+    },
+    "semester": {
+      "type": "string",
+      "enum": ["Ganjil", "Genap"],
+      "description": "Semester tahun ajaran berlangsung."
+    },
+    "academicYear": {
+      "type": "string",
+      "description": "Tahun ajaran (misalnya: 2026/2027)."
+    },
+    "topic": {
+      "type": "string",
+      "description": "Topik atau materi pokok pembelajaran."
+    },
+    "curriculumElement": {
+      "type": ["string", "object"],
+      "description": "Elemen kurikulum atau Capaian Pembelajaran (CP) yang menjadi rujukan."
+    },
+    "learningObjective": {
+      "type": ["string", "array"],
+      "items": {
+        "type": "string"
+      },
+      "description": "Tujuan Pembelajaran (TP) yang ingin dicapai."
+    },
+    "learningModel": {
+      "type": "string",
+      "description": "Model pembelajaran pedagogis yang diterapkan (misalnya: Problem-Based Learning, Project-Based Learning)."
+    },
+    "learningReadiness": {
+      "type": ["string", "object"],
+      "description": "Analisis kesiapan belajar siswa atau asesmen diagnostik awal."
+    },
+    "learningActivities": {
+      "type": "object",
+      "description": "Skenario dan tahapan kegiatan pembelajaran.",
+      "properties": {
+        "introduction": {
+          "type": ["string", "array"],
+          "description": "Kegiatan pendahuluan / orientasi."
+        },
+        "core": {
+          "type": ["string", "array"],
+          "description": "Kegiatan inti pembelajaran (Mindful, Meaningful, Joyful)."
+        },
+        "closing": {
+          "type": ["string", "array"],
+          "description": "Kegiatan penutup, refleksi, dan simpulan."
+        }
+      }
+    },
+    "assessmentPlan": {
+      "type": ["string", "object"],
+      "description": "Perencanaan rancangan asesmen (Diagnostik, Formatif, dan Sumatif)."
+    },
+    "instruments": {
+      "type": ["array", "object"],
+      "description": "Daftar instrumen atau rubrik lampiran RPP."
+    },
+    "pmmIndicator": {
+      "type": "string",
+      "description": "Target perilaku dari 8 Indikator Observasi Pengelolaan Kinerja PMM."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Waktu pembuatan dokumen RPP dalam format ISO 8601."
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Waktu modifikasi terakhir dokumen RPP dalam format ISO 8601."
+    }
+  },
+  "required": [
+    "lessonPlanId",
+    "school",
+    "teacher",
+    "subject",
+    "phase",
+    "topic",
+    "createdAt"
+  ],
+  "additionalProperties": true
+}

@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://assessmenthub.ai/schemas/question.schema.json",
+  "title": "QuestionItem",
+  "description": "Data skema butir soal tunggal (Pilihan Ganda, Uraian, Proyek, atau Observasi) dalam bank soal AssessmentHub AI.",
+  "type": "object",
+  "properties": {
+    "questionId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "ID unik butir soal."
+    },
+    "number": {
+      "type": "integer",
+      "description": "Nomor urut soal dalam paket asesmen."
+    },
+    "subject": {
+      "type": "string",
+      "description": "Mata pelajaran."
+    },
+    "grade": {
+      "type": "string",
+      "description": "Kelas atau jenjang."
+    },
+    "topic": {
+      "type": "string",
+      "description": "Topik atau materi pokok."
+    },
+    "cpReference": {
+      "type": "string",
+      "description": "Referensi Capaian Pembelajaran (CP) terkait."
+    },
+    "tpReference": {
+      "type": "string",
+      "description": "Referensi Tujuan Pembelajaran (TP) terkait."
+    },
+    "indicator": {
+      "type": "string",
+      "description": "Indikator pencapaian kompetensi atau butir spesifikasi soal."
+    },
+    "cognitiveLevel": {
+      "type": "string",
+      "enum": ["C1", "C2", "C3", "C4", "C5", "C6"],
+      "description": "Level kognitif Taksonomi Bloom (C1-Mengingat s.d. C6-Mencipta)."
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": ["Mudah", "Sedang", "Sukar"],
+      "description": "Tingkat kesukaran butir soal."
+    },
+    "type": {
+      "type": "string",
+      "enum": ["Pilihan Ganda", "Uraian", "Proyek", "Observasi", "Benar-Salah", "Menjodohkan"],
+      "description": "Bentuk atau tipe butir soal."
+    },
+    "stimulus": {
+      "type": "string",
+      "description": "Teks pengantar, wacana, studi kasus, atau tabel yang menjadi stimulus soal."
+    },
+    "questionText": {
+      "type": "string",
+      "description": "Batang soal (stem) atau instruksi pertanyaan utama."
+    },
+    "options": {
+      "type": "object",
+      "description": "Daftar opsi pilihan jawaban (untuk soal tipe Pilihan Ganda).",
+      "properties": {
+        "A": { "type": "string" },
+        "B": { "type": "string" },
+        "C": { "type": "string" },
+        "D": { "type": "string" },
+        "E": { "type": "string" }
+      }
+    },
+    "correctAnswer": {
+      "type": "string",
+      "description": "Kunci jawaban benar (misal: 'B') atau rambu-rambu jawaban singkat untuk uraian."
+    },
+    "score": {
+      "type": "number",
+      "description": "Bobot nilai atau skor maksimal butir soal ini."
+    },
+    "explanation": {
+      "type": "string",
+      "description": "Pembahasan konseptual dan alasan pedagogis mengapa jawaban tersebut benar."
+    },
+    "image": {
+      "type": "string",
+      "description": "URL atau path statis menuju gambar ilustrasi soal (jika ada)."
+    },
+    "validationStatus": {
+      "type": "string",
+      "enum": ["Pending", "Valid", "Revision Required", "Rejected"],
+      "description": "Status validasi butir soal oleh mesin validator atau kurator."
+    },
+    "reviewerNotes": {
+      "type": "string",
+      "description": "Catatan atau saran perbaikan dari validator/reviewer soal."
+    }
+  },
+  "required": [
+    "questionId",
+    "subject",
+    "topic",
+    "cognitiveLevel",
+    "type",
+    "questionText",
+    "score"
+  ],
+  "additionalProperties": true
+}

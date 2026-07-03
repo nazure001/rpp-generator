@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://assessmenthub.ai/schemas/assessment.schema.json",
+  "title": "AssessmentPackage",
+  "description": "Data skema paket asesmen komprehensif (kisi-kisi, soal, kunci, dan rubrik) dalam ekosistem AssessmentHub AI.",
+  "type": "object",
+  "properties": {
+    "assessmentId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "ID unik untuk paket asesmen ini."
+    },
+    "sourceLessonPlanId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "ID rujukan RPP asal (dari lessonPlan.schema.json)."
+    },
+    "title": {
+      "type": "string",
+      "description": "Judul paket asesmen (misalnya: Asesmen Sumatif Bab 1 Hukum Newton)."
+    },
+    "school": {
+      "type": "string",
+      "description": "Nama sekolah / satuan pendidikan."
+    },
+    "subject": {
+      "type": "string",
+      "description": "Mata pelajaran."
+    },
+    "grade": {
+      "type": "string",
+      "description": "Kelas / jenjang."
+    },
+    "phase": {
+      "type": "string",
+      "description": "Fase kurikulum."
+    },
+    "semester": {
+      "type": "string",
+      "enum": ["Ganjil", "Genap"],
+      "description": "Semester berlangsung."
+    },
+    "academicYear": {
+      "type": "string",
+      "description": "Tahun ajaran."
+    },
+    "curriculumReferences": {
+      "type": "object",
+      "description": "Referensi kurikulum resmi (CP, TP, ATP, dan indikator PMM).",
+      "properties": {
+        "cpText": { "type": "string" },
+        "tpList": { "type": "array", "items": { "type": "string" } },
+        "pmmFocus": { "type": "string" }
+      }
+    },
+    "teacherPreferences": {
+      "type": "object",
+      "description": "Preferensi konfigurasi guru (proporsi HOTS, jumlah soal, waktu pengerjaan).",
+      "properties": {
+        "dominantBloomLevel": { "type": "string" },
+        "multipleChoiceCount": { "type": "integer" },
+        "essayCount": { "type": "integer" },
+        "durationMinutes": { "type": "integer" }
+      }
+    },
+    "blueprint": {
+      "type": "array",
+      "description": "Daftar butir matriks kisi-kisi soal (Exam Blueprint).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "number": { "type": "integer" },
+          "tp": { "type": "string" },
+          "indicator": { "type": "string" },
+          "bloomLevel": { "type": "string" },
+          "questionType": { "type": "string" },
+          "weight": { "type": "number" }
+        }
+      }
+    },
+    "questions": {
+      "type": "array",
+      "description": "Daftar ID atau objek soal yang terikat pada paket asesmen ini (sinkron dengan question.schema.json).",
+      "items": {
+        "type": ["string", "object"]
+      }
+    },
+    "answerKey": {
+      "type": "object",
+      "description": "Kunci jawaban untuk soal pilihan ganda dan rambu jawaban singkat."
+    },
+    "scoringRules": {
+      "type": "object",
+      "description": "Pedoman penskoran, pembobotan nilai, dan rubrik kriteria observasi kinerja.",
+      "properties": {
+        "maxScore": { "type": "number" },
+        "passingScoreKKTP": { "type": "number" },
+        "rubrics": { "type": "array" }
+      }
+    },
+    "imageAssets": {
+      "type": "array",
+      "description": "Daftar URL atau referensi aset gambar yang digunakan dalam stimulus soal.",
+      "items": { "type": "string" }
+    },
+    "validationReport": {
+      "type": "object",
+      "description": "Laporan hasil validasi otomatis (keseimbangan Bloom, pengecekan ambigu, dan reliabilitas).",
+      "properties": {
+        "isValidated": { "type": "boolean" },
+        "bloomDistribution": { "type": "object" },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "exportTargets": {
+      "type": "array",
+      "description": "Daftar target ekspor yang telah diaktifkan atau dihasilkan (misalnya: Google Form, PDF A4, Google Docs).",
+      "items": { "type": "string" }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Draft", "Validated", "Published", "Archived"],
+      "description": "Status siklus hidup paket asesmen."
+    }
+  },
+  "required": [
+    "assessmentId",
+    "title",
+    "subject",
+    "phase",
+    "status"
+  ],
+  "additionalProperties": true
+}
