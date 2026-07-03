@@ -1,6 +1,7 @@
 {
-  "assessmentId": "invalid-draft-001",
-  "metadata": {
-    "school": "SMP Negeri 1"
+  "randomKey": "this is not a valid lesson plan or assessment draft",
+  "someData": 12345,
+  "nestedObject": {
+    "foo": "bar"
   }
 }

@@ -1,0 +1,47 @@
+{
+  "lessonPlanId": "lesson-plan-test-2026-001",
+  "createdAt": "2026-07-04T00:00:00.000Z",
+  "updatedAt": "2026-07-04T00:00:00.000Z",
+  "appName": "Smart RPP Generator Pro",
+  "exportType": "lesson_plan",
+  "exportedAt": "2026-07-04T00:00:00.000Z",
+  "school": "SMP Negeri 2 Karangtengah",
+  "teacher": "Purwa Umbara, S.Pd.",
+  "principal": "Dr. H. Ahmad Sudirman, M.Pd.",
+  "subject": "Ilmu Pengetahuan Alam (IPA)",
+  "grade": "VIII",
+  "phase": "Fase D (SMP/MTs Grade 7-9)",
+  "semester": "Ganjil",
+  "topic": "Hukum Newton dan Dinamika Gerak",
+  "curriculumElement": "Pemahaman IPA",
+  "capaianPembelajaran": "Peserta didik memahami klasifikasi zat, struktur sel, sistem organ manusia, pewarisan sifat, mekanika Newton, gelombang, kelistrikan, dan dinamika bumi.",
+  "tujuanPembelajaran": "Melalui sintaks Problem-Based Learning (PBL) pada kriteria elemen Pemahaman IPA, peserta didik mampu menganalisis esensi dasar Hukum Newton dan Dinamika Gerak serta menuntaskan target penugasan secara berkelompok.",
+  "lingkupMateri": "Hukum I, II, dan III Newton; Gaya gesek; Penerapan hukum Newton dalam kehidupan sehari-hari.",
+  "learningReadiness": {
+    "konsep": "Pemahaman konsep gaya dan gerak dasar.",
+    "teknis": "Kemampuan menggunakan alat ukur gaya sederhana.",
+    "mental": "Sikap kolaboratif dalam kerja kelompok dan keberanian menyampaikan pendapat."
+  },
+  "learningActivities": {
+    "introduction": "Guru membuka dengan pertanyaan pemantik tentang gerak benda.",
+    "core": {
+      "memahami": "Peserta didik membaca teks sumber tentang Hukum Newton.",
+      "mengaplikasi": "Peserta didik melakukan percobaan sederhana mengukur gaya gesek.",
+      "merefleksi": "Peserta didik mendiskusikan hasil percobaan dan menarik kesimpulan."
+    },
+    "closing": "Guru menyimpulkan dan memberikan tindak lanjut."
+  },
+  "assessmentPlan": {
+    "awal": "Diagnostik Kognitif awal: Mengukur pemahaman prasyarat siswa tentang Hukum Newton dan Dinamika Gerak.",
+    "formatif": "Lembar Observasi Sikap: Menilai dinamika perkembangan karakter siswa yang sinkron dengan rubrik PMM Disiplin Positif.",
+    "sumatif": "Tes tertulis akhir materi: soal pilihan ganda dan uraian tentang Hukum Newton."
+  },
+  "instruments": {
+    "awal": "Pertanyaan diagnostik: Apa yang kamu pahami tentang gaya dan gerak?",
+    "formatifAspek": "Aspek observasi: Kolaborasi, Komunikasi, Tanggung jawab.",
+    "formatifLegend": "Baru Memulai / Berkembang / Cakap / Mahir.",
+    "sumatif": "20 soal pilihan ganda + 5 soal uraian."
+  },
+  "pmmIndicator": "Disiplin Positif (Semua Fokus)",
+  "learningModel": "Problem-Based Learning (PBL)"
+}

@@ -1,0 +1,43 @@
+{
+  "assessmentId": "draft-test-2026-valid-001",
+  "source": {
+    "type": "lesson_plan_export",
+    "app": "Smart RPP Generator Pro"
+  },
+  "metadata": {
+    "school": "SMP Negeri 1 Merdeka",
+    "teacher": "Budi Santoso, S.Pd.",
+    "subject": "Matematika",
+    "grade": "VII",
+    "phase": "Fase D (SMP/MTs Grade 7-9)",
+    "semester": "Ganjil",
+    "topic": "Aljabar dan Persamaan Linear Satu Variabel",
+    "curriculumElement": "Aljabar",
+    "academicYear": "2026/2027"
+  },
+  "curriculumReference": {
+    "capaianPembelajaran": "Peserta didik dapat menyelesaikan persamaan dan pertidaksamaan linear satu variabel.",
+    "tujuanPembelajaran": "Peserta didik mampu memahami konsep variabel dan konstanta; Peserta didik mampu menyelesaikan persamaan linear satu variabel; Peserta didik mampu mengaplikasikan persamaan linear dalam pemecahan masalah sehari-hari.",
+    "lingkupMateri": "Persamaan Linear Satu Variabel"
+  },
+  "assessmentPlan": {
+    "diagnostic": "Tanya jawab lisan tentang operasi hitung bilangan bulat.",
+    "formative": "Kuis singkat di akhir sub-bab dan observasi aktivitas diskusi kelompok.",
+    "summative": "Tes tertulis akhir bab berupa soal pilihan ganda dan uraian."
+  },
+  "teacherPreferences": {
+    "questionCount": 10,
+    "questionTypes": ["pilihan_ganda", "uraian"],
+    "cognitiveLevels": ["C2", "C3", "C4"],
+    "useIllustration": false,
+    "languageStyle": "Bahasa Indonesia formal, jelas, sesuai peserta didik SMP"
+  },
+  "blueprint": [],
+  "questions": [],
+  "answerKey": [],
+  "scoringRules": [],
+  "validationReport": {
+    "status": "VALIDATED",
+    "isValidated": true
+  }
+}

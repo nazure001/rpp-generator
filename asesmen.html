@@ -526,11 +526,11 @@
                             const data = JSON.parse(event.target.result);
                             resolve(data);
                         } catch (err) {
-                            reject(new Error("File JSON tidak valid atau tidak sesuai format assessment-draft."));
+                            reject(new Error("File bukan JSON yang valid atau file rusak."));
                         }
                     };
                     reader.onerror = () => {
-                        reject(new Error("File JSON tidak valid atau tidak sesuai format assessment-draft."));
+                        reject(new Error("Gagal membaca file. Pastikan file tidak rusak."));
                     };
                     reader.readAsText(file);
                 });
@@ -572,6 +572,85 @@
                 return {
                     isValid: errors.length === 0,
                     errors
+                };
+            };
+
+            // --- TYPE DETECTION ---
+            const detectImportedJsonType = (data) => {
+                if (!data || typeof data !== 'object') return "unknown";
+
+                const hasAssessmentDraftFields =
+                    'assessmentId' in data &&
+                    'metadata' in data &&
+                    'curriculumReference' in data;
+
+                if (hasAssessmentDraftFields) return "assessment_draft";
+
+                const hasLessonPlanId = 'lessonPlanId' in data;
+                const hasExportTypeLessonPlan = data.exportType === "lesson_plan";
+                const hasLessonPlanFields =
+                    ('school' in data || 'teacher' in data) &&
+                    'subject' in data &&
+                    ('grade' in data || 'semester' in data) &&
+                    'topic' in data &&
+                    'assessmentPlan' in data;
+
+                if (hasLessonPlanId || hasExportTypeLessonPlan || hasLessonPlanFields) return "lesson_plan";
+
+                return "unknown";
+            };
+
+            // --- LESSON PLAN TO ASSESSMENT DRAFT CONVERTER ---
+            const convertLessonPlanToAssessmentDraft = (lp) => {
+                const id = lp.lessonPlanId
+                    ? `assessment-from-${lp.lessonPlanId}`
+                    : generateUUID();
+
+                const plan = lp.assessmentPlan || {};
+
+                return {
+                    assessmentId: id,
+                    source: {
+                        type: "lesson_plan_export",
+                        app: lp.appName || "Smart RPP Generator Pro",
+                        lessonPlanId: lp.lessonPlanId || ""
+                    },
+                    metadata: {
+                        school: lp.school || "",
+                        teacher: lp.teacher || "",
+                        subject: lp.subject || "",
+                        grade: lp.grade || "",
+                        phase: lp.phase || "",
+                        semester: lp.semester || "",
+                        topic: lp.topic || "",
+                        curriculumElement: lp.curriculumElement || "",
+                        academicYear: lp.academicYear || ""
+                    },
+                    curriculumReference: {
+                        capaianPembelajaran: lp.capaianPembelajaran || "",
+                        tujuanPembelajaran: lp.tujuanPembelajaran || "",
+                        lingkupMateri: lp.lingkupMateri || ""
+                    },
+                    assessmentPlan: {
+                        diagnostic: plan.awal || plan.diagnostic || "",
+                        formative: plan.formatif || plan.formative || "",
+                        summative: plan.sumatif || plan.summative || ""
+                    },
+                    teacherPreferences: {
+                        questionCount: 0,
+                        questionTypes: ["pilihan_ganda", "pg_kompleks", "uraian"],
+                        cognitiveLevels: ["C2", "C3", "C4"],
+                        useIllustration: false,
+                        languageStyle: "Bahasa Indonesia formal, jelas, sesuai peserta didik SMP"
+                    },
+                    blueprint: [],
+                    questions: [],
+                    answerKey: [],
+                    scoringRules: [],
+                    validationReport: {
+                        status: "DRAFT",
+                        notes: ["Converted from lesson-plan JSON export."]
+                    }
                 };
             };
 
@@ -644,7 +723,7 @@
                 return blueprint;
             };
 
-            const applyImportedDraft = (data) => {
+            const applyImportedDraft = (data, isFromLessonPlan = false) => {
                 const normalized = normalizeImportedDraft(data);
                 const meta = normalized.metadata || {};
                 const curr = normalized.curriculumReference || {};
@@ -714,7 +793,9 @@
                 setImportedDraft(normalized);
                 setImportStatus({
                     type: "success",
-                    message: "Draft asesmen berhasil diimpor dan kisi-kisi awal telah dibuat."
+                    message: isFromLessonPlan
+                        ? "RPP JSON berhasil dikonversi menjadi draft asesmen dan kisi-kisi awal telah dibuat."
+                        : "Draft asesmen berhasil diimpor dan kisi-kisi awal telah dibuat."
                 });
             };
 
@@ -724,19 +805,38 @@
 
                 try {
                     const data = await readJsonFile(file);
-                    const validation = validateAssessmentDraft(data);
-                    if (!validation.isValid) {
+                    const fileType = detectImportedJsonType(data);
+
+                    if (fileType === "unknown") {
                         setImportStatus({
                             type: "error",
-                            message: `Gagal Impor: Field wajib tidak lengkap. Hilang: ${validation.errors.join(", ")}.`
+                            message: "Format JSON tidak dikenali. Gunakan file assessment-draft-*.json atau lesson-plan-*.json hasil ekspor aplikasi."
                         });
                         return;
                     }
-                    applyImportedDraft(data);
+
+                    let draftData = data;
+                    let isFromLessonPlan = false;
+
+                    if (fileType === "lesson_plan") {
+                        draftData = convertLessonPlanToAssessmentDraft(data);
+                        isFromLessonPlan = true;
+                    }
+
+                    const validation = validateAssessmentDraft(draftData);
+                    if (!validation.isValid) {
+                        setImportStatus({
+                            type: "error",
+                            message: `Field wajib tidak lengkap: ${validation.errors.join(", ")}.`
+                        });
+                        return;
+                    }
+
+                    applyImportedDraft(draftData, isFromLessonPlan);
                 } catch (err) {
                     setImportStatus({
                         type: "error",
-                        message: "File JSON tidak valid atau tidak sesuai format assessment-draft."
+                        message: `Gagal membaca file: ${err.message}`
                     });
                 }
             };
