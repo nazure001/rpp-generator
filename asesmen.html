@@ -434,6 +434,123 @@
                 updateQuestionReview(idx, { [field]: value });
             };
 
+            // --- MVP 8: Export Readiness Gate Helpers ---
+            const getExportReadiness = () => {
+                const list = Array.isArray(bankSoalQuestions) ? bankSoalQuestions : [];
+                let score = 100;
+                const warnings = [];
+                const blockers = [];
+                const missingMetadata = [];
+
+                // 1. Total questions evaluation
+                const totalQuestions = list.length;
+                if (totalQuestions === 0) {
+                    blockers.push("Tidak ada soal di dalam Bank Soal.");
+                    score -= 30;
+                }
+
+                // 2. Question reviewStatus evaluation
+                const needsRevision = list.filter(q => q.reviewStatus === "Needs Revision").length;
+                const validatedOnly = list.filter(q => q.reviewStatus === "Validated").length;
+                const approvedOnly = list.filter(q => q.reviewStatus === "Approved").length;
+                const lockedCount = list.filter(q => q.reviewStatus === "Locked").length;
+
+                if (needsRevision > 0) {
+                    blockers.push(`Ada ${needsRevision} soal yang memerlukan revisi (Needs Revision).`);
+                    score -= 20;
+                }
+                if (validatedOnly > 0) {
+                    warnings.push(`Ada ${validatedOnly} soal yang belum ditinjau/disetujui (Validated saja).`);
+                    score -= 15;
+                }
+                if (approvedOnly > 0) {
+                    warnings.push(`Ada ${approvedOnly} soal yang disetujui (Approved) tetapi belum dikunci (Locked).`);
+                    score -= 10;
+                }
+
+                // 3. Blueprint/kisi-kisi check
+                const hasBlueprint = Array.isArray(formData.kisiKisi) && formData.kisiKisi.length > 0;
+                if (!hasBlueprint) {
+                    warnings.push("Matriks Kisi-Kisi Soal (Blueprint) kosong.");
+                    score -= 10;
+                }
+
+                // 4. Metadata check
+                const metaSchool = formData.sekolah || (importedDraft && importedDraft.metadata && importedDraft.metadata.school) || "";
+                const metaTeacher = formData.guru || (importedDraft && importedDraft.metadata && importedDraft.metadata.teacher) || "";
+                const metaSubject = selectedMapel || (importedDraft && importedDraft.metadata && importedDraft.metadata.subject) || "";
+                const metaGrade = formData.kelas || (importedDraft && importedDraft.metadata && (importedDraft.metadata.grade || importedDraft.metadata.semester)) || "";
+                const metaTopic = formData.topik || (importedDraft && importedDraft.metadata && importedDraft.metadata.topic) || "";
+
+                if (!metaSchool.trim()) {
+                    missingMetadata.push("Sekolah");
+                    score -= 5;
+                }
+                if (!metaTeacher.trim()) {
+                    missingMetadata.push("Guru");
+                    score -= 5;
+                }
+                if (!metaSubject.trim()) {
+                    missingMetadata.push("Mata Pelajaran");
+                    score -= 5;
+                }
+                if (!metaGrade.trim()) {
+                    missingMetadata.push("Kelas/Semester");
+                    score -= 5;
+                }
+                if (!metaTopic.trim()) {
+                    missingMetadata.push("Topik/Materi");
+                    score -= 5;
+                }
+
+                if (missingMetadata.length > 0) {
+                    blockers.push(`Metadata wajib belum lengkap: ${missingMetadata.join(", ")}.`);
+                }
+
+                // 5. Answer keys check for MC questions
+                const missingKeysCount = list.filter(q => !q.answerKey || !q.answerKey.trim()).length;
+                if (missingKeysCount > 0) {
+                    blockers.push(`Ada ${missingKeysCount} soal Pilihan Ganda yang tidak memiliki kunci jawaban.`);
+                    score -= 10;
+                }
+
+                // Ensure score doesn't go below 0
+                score = Math.max(0, score);
+
+                // Status rules
+                let status = "READY";
+                if (blockers.length > 0) {
+                    status = "NOT_READY";
+                } else if (warnings.length > 0 || lockedCount < totalQuestions) {
+                    status = "WARNING";
+                }
+
+                const isReadyForFinalExport = status === "READY";
+
+                return {
+                    status,
+                    score,
+                    totalQuestions,
+                    lockedQuestions: lockedCount,
+                    approvedQuestions: approvedOnly,
+                    needsRevisionQuestions: needsRevision,
+                    validatedOnlyQuestions: validatedOnly,
+                    missingMetadata,
+                    warnings,
+                    blockers,
+                    isReadyForFinalExport
+                };
+            };
+
+            const getReadinessBadgeClass = (status) => {
+                switch (status) {
+                    case "READY": return "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                    case "WARNING": return "bg-amber-500/20 text-amber-300 border border-amber-500/30";
+                    case "NOT_READY": return "bg-rose-500/20 text-rose-300 border border-rose-500/30";
+                    default: return "bg-slate-500/20 text-slate-300 border border-slate-500/30";
+                }
+            };
+
             const [formData, setFormData] = useState({
                 sekolah: "SMP Negeri 2 Karangtengah",
                 guru: "Purwa Umbara, S.Pd.",
@@ -1141,6 +1258,15 @@
             };
 
             const handleExportFinalJSON = () => {
+                const readiness = getExportReadiness();
+                if (readiness.status !== "READY") {
+                    const notes = [...readiness.blockers, ...readiness.warnings];
+                    const proceed = window.confirm(
+                        `Paket asesmen belum READY.\n\nStatus: ${readiness.status}\nSkor: ${readiness.score}/100\n\nCatatan:\n- ${notes.join("\n- ")}\n\nTetap export JSON?`
+                    );
+                    if (!proceed) return;
+                }
+
                 const mapQuestionValidationStatus = (status) => {
                     if (status === "VALID" || status === "WARNING") return "Valid";
                     if (status === "ERROR") return "Revision Required";
@@ -1321,6 +1447,20 @@
                         approved: bankSoalQuestions.length > 0 ? getReviewSummary(bankSoalQuestions).approved : 0,
                         locked: bankSoalQuestions.length > 0 ? getReviewSummary(bankSoalQuestions).locked : 0,
                         isReadyForFinalExport: bankSoalQuestions.length > 0 ? getReviewSummary(bankSoalQuestions).isReady : false
+                    },
+                    exportReadiness: {
+                        status: readiness.status,
+                        score: readiness.score,
+                        totalQuestions: readiness.totalQuestions,
+                        lockedQuestions: readiness.lockedQuestions,
+                        approvedQuestions: readiness.approvedQuestions,
+                        needsRevisionQuestions: readiness.needsRevisionQuestions,
+                        validatedOnlyQuestions: readiness.validatedOnlyQuestions,
+                        missingMetadata: readiness.missingMetadata,
+                        warnings: readiness.warnings,
+                        blockers: readiness.blockers,
+                        isReadyForFinalExport: readiness.isReadyForFinalExport,
+                        checkedAt: new Date().toISOString()
                     },
                     exportTargets: ["JSON"],
                     exportedAt: new Date().toISOString(),
@@ -2143,6 +2283,93 @@
                                         <ButtonPrimary onClick={handlePrint} icon="printer">Cetak Sekarang</ButtonPrimary>
                                     </div>
                                 </div>
+
+                                {/* KESIAPAN EXPORT FINAL PANEL */}
+                                {(() => {
+                                    const readiness = getExportReadiness();
+                                    const notes = [...readiness.blockers, ...readiness.warnings];
+                                    const hasNotes = notes.length > 0;
+                                    
+                                    const messageMap = {
+                                        "READY": "Paket asesmen siap diexport final. Semua soal telah dikunci.",
+                                        "WARNING": "Paket asesmen dapat diexport, tetapi masih ada catatan yang perlu diperhatikan.",
+                                        "NOT_READY": "Paket asesmen belum ideal untuk export final. Periksa catatan berikut."
+                                    };
+
+                                    return (
+                                        <div className="glass-panel p-6 rounded-2xl border border-white/10 no-print space-y-4">
+                                            <div className="flex items-center justify-between flex-wrap gap-4 border-b border-white/5 pb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-violet-500/20 text-violet-400 flex items-center justify-center">
+                                                        <SafeIcon name="shield-check" className="w-6 h-6" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-sm font-bold text-white">Kesiapan Export Final</h3>
+                                                        <p className="text-xs text-slate-400 mt-0.5">Analisis kesesuaian instrumen terhadap skema validasi, metadata, dan approval panitia.</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`text-xs uppercase px-3 py-1 rounded-xl font-bold tracking-wider ${getReadinessBadgeClass(readiness.status)}`}>
+                                                        {readiness.status}
+                                                    </span>
+                                                    <div className="bg-slate-800/80 px-3 py-1 rounded-xl border border-white/5 text-xs text-slate-300 font-bold">
+                                                        Skor Kesiapan: <span className="text-violet-300 font-extrabold">{readiness.score}</span> / 100
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                                <div className="bg-slate-950/40 p-3 rounded-xl border border-white/5 text-center flex flex-col items-center justify-center">
+                                                    <span className="text-[10px] uppercase font-bold text-slate-500">Total Soal</span>
+                                                    <span className="text-lg font-bold text-white mt-1">{readiness.totalQuestions}</span>
+                                                </div>
+                                                <div className="bg-blue-500/10 p-3 rounded-xl border border-blue-500/20 text-center flex flex-col items-center justify-center">
+                                                    <span className="text-[10px] uppercase font-bold text-blue-400">Validated</span>
+                                                    <span className="text-lg font-bold text-blue-300 mt-1">{readiness.validatedOnlyQuestions}</span>
+                                                </div>
+                                                <div className="bg-amber-500/10 p-3 rounded-xl border border-amber-500/20 text-center flex flex-col items-center justify-center">
+                                                    <span className="text-[10px] uppercase font-bold text-amber-400">Needs Revision</span>
+                                                    <span className="text-lg font-bold text-amber-300 mt-1">{readiness.needsRevisionQuestions}</span>
+                                                </div>
+                                                <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20 text-center flex flex-col items-center justify-center">
+                                                    <span className="text-[10px] uppercase font-bold text-emerald-400">Approved</span>
+                                                    <span className="text-lg font-bold text-emerald-300 mt-1">{readiness.approvedQuestions}</span>
+                                                </div>
+                                                <div className="bg-rose-500/10 p-3 rounded-xl border border-rose-500/20 text-center flex flex-col items-center justify-center">
+                                                    <span className="text-[10px] uppercase font-bold text-rose-400">Locked</span>
+                                                    <span className="text-lg font-bold text-rose-300 mt-1">{readiness.lockedQuestions}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-3 pt-2">
+                                                <div className={`p-3 rounded-xl text-xs font-semibold leading-relaxed ${
+                                                    readiness.status === "READY" ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300"
+                                                    : readiness.status === "WARNING" ? "bg-amber-500/10 border border-amber-500/20 text-amber-300"
+                                                    : "bg-rose-500/10 border border-rose-500/20 text-rose-300"
+                                                }`}>
+                                                    {messageMap[readiness.status]}
+                                                </div>
+
+                                                {hasNotes && (
+                                                    <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
+                                                        {readiness.blockers.map((b, i) => (
+                                                            <div key={`b-${i}`} className="flex items-start gap-2 bg-rose-500/5 border border-rose-500/10 text-rose-400 p-2.5 rounded-xl text-[11px] font-medium leading-normal">
+                                                                <SafeIcon name="x-circle" className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                                                <span>{b}</span>
+                                                            </div>
+                                                        ))}
+                                                        {readiness.warnings.map((w, i) => (
+                                                            <div key={`w-${i}`} className="flex items-start gap-2 bg-amber-500/5 border border-amber-500/10 text-amber-400 p-2.5 rounded-xl text-[11px] font-medium leading-normal">
+                                                                <SafeIcon name="alert-triangle" className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                                                <span>{w}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* LEMBAR 1: KISI-KISI & SOAL PG */}
                                 <div className="bg-white text-black p-12 shadow-2xl mx-auto max-w-[210mm] min-h-[297mm] text-[12.5px] leading-[1.6] print-container">
