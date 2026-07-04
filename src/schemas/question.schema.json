@@ -2,13 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://assessmenthub.ai/schemas/question.schema.json",
   "title": "QuestionItem",
-  "description": "Data skema butir soal tunggal (Pilihan Ganda, Uraian, Proyek, atau Observasi) dalam bank soal AssessmentHub AI.",
+  "description": "Data skema butir soal tunggal (Pilihan Ganda, Kompleks, Menjodohkan, Uraian, dll.) dalam bank soal AssessmentHub AI.",
   "type": "object",
   "properties": {
     "questionId": {
       "type": "string",
       "format": "uuid",
       "description": "ID unik butir soal."
+    },
+    "id": {
+      "type": "string",
+      "description": "Alias ID unik untuk kompabilitas."
     },
     "number": {
       "type": "integer",
@@ -25,6 +29,10 @@
     "topic": {
       "type": "string",
       "description": "Topik atau materi pokok."
+    },
+    "material": {
+      "type": "string",
+      "description": "Materi pokok atau lingkup materi."
     },
     "cpReference": {
       "type": "string",
@@ -46,11 +54,36 @@
     "difficulty": {
       "type": "string",
       "enum": ["Mudah", "Sedang", "Sukar"],
-      "description": "Tingkat kesukaran butir soal."
+      "description": "Tingkat kesukaran butir soal (warisan)."
+    },
+    "difficultyTarget": {
+      "type": "string",
+      "enum": ["Easy", "Medium", "Hard"],
+      "description": "Target tingkat kesukaran butir soal."
+    },
+    "predictedDiscrimination": {
+      "type": "string",
+      "enum": ["Low", "Medium", "High"],
+      "description": "Prediksi daya pembeda butir soal."
     },
     "type": {
       "type": "string",
-      "enum": ["Pilihan Ganda", "Uraian", "Proyek", "Observasi", "Benar-Salah", "Menjodohkan"],
+      "enum": [
+        "multiple_choice",
+        "multiple_select",
+        "checkbox",
+        "true_false",
+        "matching",
+        "short_answer",
+        "essay",
+        "statement_table",
+        "Pilihan Ganda",
+        "Uraian",
+        "Proyek",
+        "Observasi",
+        "Benar-Salah",
+        "Menjodohkan"
+      ],
       "description": "Bentuk atau tipe butir soal."
     },
     "stimulus": {
@@ -62,19 +95,81 @@
       "description": "Batang soal (stem) atau instruksi pertanyaan utama."
     },
     "options": {
-      "type": "object",
-      "description": "Daftar opsi pilihan jawaban (untuk soal tipe Pilihan Ganda).",
-      "properties": {
-        "A": { "type": "string" },
-        "B": { "type": "string" },
-        "C": { "type": "string" },
-        "D": { "type": "string" },
-        "E": { "type": "string" }
-      }
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "A": { "type": "string" },
+            "B": { "type": "string" },
+            "C": { "type": "string" },
+            "D": { "type": "string" },
+            "E": { "type": "string" }
+          }
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": { "type": "string" },
+              "text": { "type": "string" },
+              "isCorrect": { "type": "boolean" }
+            },
+            "required": ["key", "text"]
+          }
+        }
+      ],
+      "description": "Daftar opsi pilihan jawaban (bisa berupa objek dengan key A-E atau array objek opsi)."
+    },
+    "statements": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Daftar pernyataan untuk soal tipe statement_table atau true_false kompleks."
+    },
+    "pairs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": { "type": "string" },
+          "value": { "type": "string" }
+        }
+      },
+      "description": "Daftar pasangan/jodoh untuk soal menjodohkan (matching)."
     },
     "correctAnswer": {
       "type": "string",
-      "description": "Kunci jawaban benar (misal: 'B') atau rambu-rambu jawaban singkat untuk uraian."
+      "description": "Kunci jawaban benar tunggal (warisan/alias)."
+    },
+    "answerKey": {
+      "type": "string",
+      "description": "Kunci jawaban benar tunggal."
+    },
+    "answerKeys": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Daftar kunci jawaban benar untuk soal pilihan ganda kompleks / multiple_select."
+    },
+    "matchingAnswerKey": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "leftKey": { "type": "string" },
+          "rightKey": { "type": "string" }
+        }
+      },
+      "description": "Kunci jawaban menjodohkan."
+    },
+    "shortAnswerKeys": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Alternatif jawaban singkat yang diterima."
+    },
+    "rubric": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Kriteria penilaian atau rubrik penskoran untuk soal uraian/essay."
     },
     "score": {
       "type": "number",
@@ -86,12 +181,51 @@
     },
     "image": {
       "type": "string",
-      "description": "URL atau path statis menuju gambar ilustrasi soal (jika ada)."
+      "description": "URL atau path statis menuju gambar ilustrasi soal (warisan)."
+    },
+    "illustration": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["none", "prompt_only", "image_url"]
+        },
+        "type": {
+          "type": "string",
+          "enum": ["", "diagram", "scene", "table", "chart", "photo_style", "icon"]
+        },
+        "prompt": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "altText": { "type": "string" }
+      },
+      "required": ["mode"]
+    },
+    "cardMetadata": {
+      "type": "object",
+      "properties": {
+        "phase": { "type": "string" },
+        "grade": { "type": "string" },
+        "subject": { "type": "string" },
+        "topic": { "type": "string" },
+        "learningObjective": { "type": "string" },
+        "indicator": { "type": "string" },
+        "questionForm": { "type": "string" },
+        "cognitiveLevel": { "type": "string" },
+        "difficultyTarget": { "type": "string" },
+        "predictedDiscrimination": { "type": "string" },
+        "scoringGuide": { "type": "string" },
+        "reviewNotes": { "type": "string" }
+      }
     },
     "validationStatus": {
       "type": "string",
       "enum": ["Pending", "Valid", "Revision Required", "Rejected"],
       "description": "Status validasi butir soal oleh mesin validator atau kurator."
+    },
+    "reviewStatus": {
+      "type": "string",
+      "enum": ["Validated", "Needs Revision", "Approved", "Locked"],
+      "description": "Status review butir soal oleh panitia."
     },
     "reviewerNotes": {
       "type": "string",
