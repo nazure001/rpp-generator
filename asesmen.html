@@ -398,6 +398,42 @@
             const [bankSoalQuestions, setBankSoalQuestions] = useState([]);
             const [editingQuestionIdx, setEditingQuestionIdx] = useState(null);
 
+            // --- MVP 7: Review & Approval Workflow Helpers ---
+            const getReviewSummary = (questionsList) => {
+                const list = Array.isArray(questionsList) ? questionsList : [];
+                return {
+                    total: list.length,
+                    validated: list.filter(q => q.reviewStatus === "Validated").length,
+                    needsRevision: list.filter(q => q.reviewStatus === "Needs Revision").length,
+                    approved: list.filter(q => q.reviewStatus === "Approved").length,
+                    locked: list.filter(q => q.reviewStatus === "Locked").length,
+                    isReady: list.length > 0 && list.every(q => q.reviewStatus === "Locked")
+                };
+            };
+
+            const updateQuestionReview = (idx, patch) => {
+                setBankSoalQuestions(prev => prev.map((q, i) => i === idx ? { ...q, ...patch } : q));
+            };
+
+            const getReviewStatusBadgeClass = (status) => {
+                switch (status) {
+                    case "Draft": return "bg-slate-500/20 text-slate-300 border border-slate-500/30";
+                    case "Parsed": return "bg-violet-500/20 text-violet-300 border border-violet-500/30";
+                    case "Validated": return "bg-blue-500/20 text-blue-300 border border-blue-500/30";
+                    case "Needs Revision": return "bg-amber-500/20 text-amber-300 border border-amber-500/30";
+                    case "Approved": return "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                    case "Locked": return "bg-rose-500/20 text-rose-300 border border-rose-500/30";
+                    default: return "bg-slate-500/20 text-slate-300 border border-slate-500/30";
+                }
+            };
+
+            const isQuestionLocked = (question) => question?.reviewStatus === "Locked";
+
+            const handleReviewerFieldChange = (idx, field, value) => {
+                if (bankSoalQuestions[idx]?.reviewStatus === "Locked") return;
+                updateQuestionReview(idx, { [field]: value });
+            };
+
             const [formData, setFormData] = useState({
                 sekolah: "SMP Negeri 2 Karangtengah",
                 guru: "Purwa Umbara, S.Pd.",
@@ -657,6 +693,13 @@
             };
 
             const handleRemoveFromBank = (idx) => {
+                if (bankSoalQuestions[idx]?.reviewStatus === "Locked") {
+                    setParseStatus({
+                        type: "error",
+                        message: "Soal terkunci tidak dapat dihapus. Buka kunci terlebih dahulu."
+                    });
+                    return;
+                }
                 setBankSoalQuestions(prev => {
                     const updated = prev.filter((_, i) => i !== idx);
                     return updated.map((q, i) => ({ ...q, number: i + 1 }));
@@ -1202,7 +1245,12 @@
                             grade: metaGrade,
                             score: q.score || 1,
                             explanation: q.explanation || "",
-                            validationStatus: mapQuestionValidationStatus(q.validationStatus)
+                            validationStatus: mapQuestionValidationStatus(q.validationStatus),
+                            reviewStatus: q.reviewStatus || "Validated",
+                            reviewerName: q.reviewerName || "",
+                            reviewerNotes: q.reviewerNotes || "",
+                            reviewedAt: q.reviewedAt || "",
+                            lockedAt: q.lockedAt || ""
                           }))
                         : importedDraft ? [] : [
                         ...formData.soalPG.map(q => ({
@@ -1213,7 +1261,12 @@
                             options: q.opsi,
                             correctAnswer: q.kunci,
                             explanation: q.pembahasan,
-                            cognitiveLevel: formData.bloom || "C4"
+                            cognitiveLevel: formData.bloom || "C4",
+                            reviewStatus: "Validated",
+                            reviewerName: "",
+                            reviewerNotes: "",
+                            reviewedAt: "",
+                            lockedAt: ""
                         })),
                         ...formData.soalUraian.map(q => ({
                             questionId: generateUUID(),
@@ -1222,7 +1275,12 @@
                             questionText: q.soal,
                             guidelines: q.rambu,
                             maxScore: q.skorMaks,
-                            cognitiveLevel: q.level || "C5"
+                            cognitiveLevel: q.level || "C5",
+                            reviewStatus: "Validated",
+                            reviewerName: "",
+                            reviewerNotes: "",
+                            reviewedAt: "",
+                            lockedAt: ""
                         }))
                     ],
                     answerKey: bankSoalQuestions.length > 0
@@ -1255,6 +1313,14 @@
                             return acc;
                         }, {}),
                         warnings: []
+                    },
+                    reviewReport: {
+                        totalQuestions: bankSoalQuestions.length > 0 ? getReviewSummary(bankSoalQuestions).total : (formData.soalPG.length + formData.soalUraian.length),
+                        validated: bankSoalQuestions.length > 0 ? getReviewSummary(bankSoalQuestions).validated : (formData.soalPG.length + formData.soalUraian.length),
+                        needsRevision: bankSoalQuestions.length > 0 ? getReviewSummary(bankSoalQuestions).needsRevision : 0,
+                        approved: bankSoalQuestions.length > 0 ? getReviewSummary(bankSoalQuestions).approved : 0,
+                        locked: bankSoalQuestions.length > 0 ? getReviewSummary(bankSoalQuestions).locked : 0,
+                        isReadyForFinalExport: bankSoalQuestions.length > 0 ? getReviewSummary(bankSoalQuestions).isReady : false
                     },
                     exportTargets: ["JSON"],
                     exportedAt: new Date().toISOString(),
@@ -1809,10 +1875,15 @@
                                                                 <td className="p-3">
                                                                     <button
                                                                         onClick={() => handleRemoveFromBank(idx)}
-                                                                        className="text-rose-400 hover:text-rose-300 transition-colors"
-                                                                        title="Hapus dari bank soal"
+                                                                        disabled={isQuestionLocked(q)}
+                                                                        className={`transition-colors ${
+                                                                            isQuestionLocked(q)
+                                                                                ? 'text-slate-600 cursor-not-allowed opacity-50'
+                                                                                : 'text-rose-400 hover:text-rose-300'
+                                                                        }`}
+                                                                        title={isQuestionLocked(q) ? "Soal terkunci tidak dapat dihapus" : "Hapus dari bank soal"}
                                                                     >
-                                                                        <SafeIcon name="trash-2" className="w-4 h-4" />
+                                                                        <SafeIcon name={isQuestionLocked(q) ? "lock" : "trash-2"} className="w-4 h-4" />
                                                                     </button>
                                                                 </td>
                                                             </tr>
@@ -1820,13 +1891,182 @@
                                                     </tbody>
                                                 </table>
                                             </div>
+
+                                            {/* REVIEW SUMMARY CARD */}
+                                            {(() => {
+                                                const summary = getReviewSummary(bankSoalQuestions);
+                                                return (
+                                                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3 p-4 bg-slate-900/50 rounded-2xl border border-white/5 mt-4">
+                                                        <div className="bg-slate-950/40 p-3 rounded-xl border border-white/5 flex flex-col items-center justify-center text-center">
+                                                            <span className="text-[10px] uppercase font-bold text-slate-500">Total Soal</span>
+                                                            <span className="text-xl font-bold text-white mt-1">{summary.total}</span>
+                                                        </div>
+                                                        <div className="bg-blue-500/10 p-3 rounded-xl border border-blue-500/20 flex flex-col items-center justify-center text-center">
+                                                            <span className="text-[10px] uppercase font-bold text-blue-400">Validated</span>
+                                                            <span className="text-xl font-bold text-blue-300 mt-1">{summary.validated}</span>
+                                                        </div>
+                                                        <div className="bg-amber-500/10 p-3 rounded-xl border border-amber-500/20 flex flex-col items-center justify-center text-center">
+                                                            <span className="text-[10px] uppercase font-bold text-amber-400">Needs Revision</span>
+                                                            <span className="text-xl font-bold text-amber-300 mt-1">{summary.needsRevision}</span>
+                                                        </div>
+                                                        <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20 flex flex-col items-center justify-center text-center">
+                                                            <span className="text-[10px] uppercase font-bold text-emerald-400">Approved</span>
+                                                            <span className="text-xl font-bold text-emerald-300 mt-1">{summary.approved}</span>
+                                                        </div>
+                                                        <div className="bg-rose-500/10 p-3 rounded-xl border border-rose-500/20 flex flex-col items-center justify-center text-center">
+                                                            <span className="text-[10px] uppercase font-bold text-rose-400">Locked</span>
+                                                            <span className="text-xl font-bold text-rose-300 mt-1">{summary.locked}</span>
+                                                        </div>
+                                                        <div className="md:col-span-5 mt-2">
+                                                            {summary.isReady ? (
+                                                                <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3 rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/10">
+                                                                    <SafeIcon name="check-circle" className="w-4 h-4 shrink-0" />
+                                                                    <span>Paket soal siap diexport final. Semua soal sudah dikunci.</span>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 px-4 py-3 rounded-xl text-xs font-bold shadow-lg shadow-amber-500/10">
+                                                                    <SafeIcon name="alert-triangle" className="w-4 h-4 shrink-0" />
+                                                                    <span>Paket soal belum final. Masih ada soal yang belum dikunci.</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
+
+                                            {/* REVIEW PANITIA & APPROVAL SOAL SECTION */}
+                                            <div className="space-y-4 pt-6 border-t border-white/10">
+                                                <div>
+                                                    <h3 className="text-sm font-bold text-white flex items-center gap-2 border-l-4 border-violet-400 pl-3">
+                                                        <SafeIcon name="check-square" className="w-4 h-4 text-violet-400" />
+                                                        <span>Review Panitia &amp; Approval Soal</span>
+                                                    </h3>
+                                                    <p className="text-xs text-slate-400 mt-1 pl-3 leading-relaxed">
+                                                        Panitia dapat meninjau soal yang sudah masuk Bank Soal, memberi catatan revisi, menyetujui soal, atau mengunci soal sebelum export final.
+                                                    </p>
+                                                </div>
+
+                                                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                                                    {bankSoalQuestions.map((q, idx) => (
+                                                        <div key={q.id || idx} className={`p-5 rounded-2xl border transition-all ${
+                                                            isQuestionLocked(q)
+                                                                ? 'bg-slate-900/40 border-rose-500/20'
+                                                                : 'bg-slate-900/60 border-white/5 hover:border-white/10'
+                                                        }`}>
+                                                            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 pb-3 mb-3">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-bold text-violet-300 text-sm">Soal #{q.number}</span>
+                                                                    <span className={`text-[10px] uppercase px-2.5 py-0.5 rounded-md font-bold tracking-wider ${getReviewStatusBadgeClass(q.reviewStatus)}`}>
+                                                                        {q.reviewStatus}
+                                                                    </span>
+                                                                    <span className="bg-brand-500/10 border border-brand-500/20 text-brand-300 text-[10px] px-2 py-0.5 rounded font-bold uppercase">
+                                                                        {q.cognitiveLevel || "—"}
+                                                                    </span>
+                                                                    <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded font-mono font-bold">
+                                                                        Kunci: {q.answerKey}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="text-slate-500 text-[10px] font-mono">
+                                                                    {q.reviewedAt && <span>Ditinjau: {new Date(q.reviewedAt).toLocaleString('id-ID')}</span>}
+                                                                    {q.lockedAt && <span className="ml-3 text-rose-400">Terkunci: {new Date(q.lockedAt).toLocaleString('id-ID')}</span>}
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div className="space-y-4">
+                                                                {q.stimulus && <p className="text-xs text-slate-400 italic border-l-2 border-slate-600 pl-2">{q.stimulus}</p>}
+                                                                <p className="text-xs text-slate-200 leading-relaxed font-normal">{q.questionText}</p>
+                                                                
+                                                                {Array.isArray(q.options) && q.options.length > 0 && (
+                                                                    <div className="grid grid-cols-2 gap-2 pl-3">
+                                                                        {q.options.map((opt, oi) => opt && opt.key ? (
+                                                                            <div key={oi} className={`text-[11px] px-2 py-1 rounded border ${
+                                                                                opt.key === q.answerKey
+                                                                                    ? 'bg-emerald-950/20 border-emerald-500/20 text-emerald-300'
+                                                                                    : 'bg-slate-950/30 border-white/5 text-slate-400'
+                                                                            }`}>
+                                                                                {opt.key}. {opt.text}
+                                                                            </div>
+                                                                        ) : null)}
+                                                                    </div>
+                                                                )}
+
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-white/5">
+                                                                    <div>
+                                                                        <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Nama Peninjau / Reviewer</label>
+                                                                        <input 
+                                                                            type="text" 
+                                                                            value={q.reviewerName || ""} 
+                                                                            onChange={e => handleReviewerFieldChange(idx, 'reviewerName', e.target.value)} 
+                                                                            disabled={isQuestionLocked(q)}
+                                                                            className="w-full p-2.5 rounded-xl text-xs text-slate-200 bg-slate-950/80 border border-white/10 outline-none focus:border-brand-500 disabled:opacity-50 transition-all" 
+                                                                            placeholder="Masukkan nama peninjau..." 
+                                                                        />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Catatan / Rekomendasi Revisi</label>
+                                                                        <textarea 
+                                                                            value={q.reviewerNotes || ""} 
+                                                                            onChange={e => handleReviewerFieldChange(idx, 'reviewerNotes', e.target.value)} 
+                                                                            disabled={isQuestionLocked(q)}
+                                                                            rows={2}
+                                                                            className="w-full p-2.5 rounded-xl text-xs text-slate-200 bg-slate-950/80 border border-white/10 outline-none focus:border-brand-500 disabled:opacity-50 transition-all resize-none" 
+                                                                            placeholder="Tulis catatan revisi atau masukan di sini..." 
+                                                                        />
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                                                                    <div className="flex gap-2">
+                                                                        <button
+                                                                            onClick={() => updateQuestionReview(idx, { reviewStatus: "Needs Revision", reviewedAt: new Date().toISOString() })}
+                                                                            disabled={isQuestionLocked(q)}
+                                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 disabled:opacity-30 text-white rounded-xl text-xs font-bold transition-all"
+                                                                        >
+                                                                            <SafeIcon name="alert-circle" className="w-3.5 h-3.5" />
+                                                                            <span>Minta Revisi</span>
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => updateQuestionReview(idx, { reviewStatus: "Approved", reviewedAt: new Date().toISOString() })}
+                                                                            disabled={isQuestionLocked(q)}
+                                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:opacity-30 text-white rounded-xl text-xs font-bold transition-all"
+                                                                        >
+                                                                            <SafeIcon name="check-circle" className="w-3.5 h-3.5" />
+                                                                            <span>Setujui</span>
+                                                                        </button>
+                                                                    </div>
+                                                                    
+                                                                    <div>
+                                                                        {isQuestionLocked(q) ? (
+                                                                            <button
+                                                                                onClick={() => updateQuestionReview(idx, { reviewStatus: "Approved", lockedAt: "" })}
+                                                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold border border-white/10 transition-all"
+                                                                            >
+                                                                                <SafeIcon name="unlock" className="w-3.5 h-3.5 text-rose-400" />
+                                                                                <span>Buka Kunci</span>
+                                                                            </button>
+                                                                        ) : (
+                                                                            <button
+                                                                                onClick={() => updateQuestionReview(idx, { reviewStatus: "Locked", lockedAt: new Date().toISOString() })}
+                                                                                disabled={q.reviewStatus !== "Approved"}
+                                                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all"
+                                                                            >
+                                                                                <SafeIcon name="lock" className="w-3.5 h-3.5" />
+                                                                                <span>Kunci</span>
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
                                 {/* === END BANK SOAL & PARSER SOAL === */}
 
                                 <div className="flex justify-between pt-6 border-t border-white/10">
-                                    <ButtonSecondary onClick={() => setStep(2)}>Kembali</ButtonSecondary>
                                     <ButtonPrimary onClick={() => setStep(4)} icon="arrow-right">Lanjut ke Rubrik Sikap</ButtonPrimary>
                                 </div>
 
