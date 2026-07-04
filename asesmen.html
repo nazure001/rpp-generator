@@ -367,8 +367,22 @@
             </button>
         );
 
+        const SafeIcon = ({ name, className = "w-4 h-4" }) => {
+            return <span className="inline-flex items-center justify-center shrink-0" dangerouslySetInnerHTML={{ __html: `<i data-lucide="${name}" class="${className}"></i>` }} />;
+        };
+
         // --- MAIN APPLICATION ---
         function App() {
+            const generateUUID = () => {
+                if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                    return crypto.randomUUID();
+                }
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    const r = Math.random() * 16 | 0;
+                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            };
             const [step, setStep] = useState(1);
             const [selectedFase, setSelectedFase] = useState("Fase D (SMP/MTs Grade 7-9)");
             const [selectedMapel, setSelectedMapel] = useState("Ilmu Pengetahuan Alam (IPA)");
@@ -545,56 +559,76 @@
 
             // --- MVP 6: Parser Event Handlers ---
             const handleParseQuestions = () => {
-                const text = rawQuestionInput.trim();
-                if (!text) {
-                    setParseStatus({ type: "error", message: "Input teks soal tidak boleh kosong." });
-                    return;
+                try {
+                    const text = rawQuestionInput.trim();
+                    if (!text) {
+                        setParseStatus({ type: "error", message: "Input teks soal tidak boleh kosong." });
+                        return;
+                    }
+                    const results = parseQuestionsFromText(text);
+                    if (results.length === 0) {
+                        setParseStatus({ type: "error", message: "Tidak ada soal yang berhasil diparsing. Pastikan format soal sesuai (nomor. teks soal, A. opsi, ..., Kunci: X)." });
+                        return;
+                    }
+                    setParsedQuestions(results);
+                    setParseStatus({ type: "success", message: `${results.length} soal berhasil diparsing. Klik 'Validasi Soal' untuk memeriksa kualitas soal.` });
+                    setEditingQuestionIdx(null);
+                } catch (e) {
+                    console.error("Error parsing questions:", e);
+                    setParseStatus({ type: "error", message: `Terjadi error saat memproses soal: ${e.message}` });
                 }
-                const results = parseQuestionsFromText(text);
-                if (results.length === 0) {
-                    setParseStatus({ type: "error", message: "Tidak ada soal yang berhasil diparsing. Pastikan format soal sesuai (nomor. teks soal, A. opsi, ..., Kunci: X)." });
-                    return;
-                }
-                setParsedQuestions(results);
-                setParseStatus({ type: "success", message: `${results.length} soal berhasil diparsing. Klik 'Validasi Soal' untuk memeriksa kualitas soal.` });
-                setEditingQuestionIdx(null);
             };
 
             const handleValidateQuestions = () => {
-                if (parsedQuestions.length === 0) {
-                    setParseStatus({ type: "error", message: "Belum ada soal yang diparsing. Klik 'Parse Soal' terlebih dahulu." });
-                    return;
+                try {
+                    if (parsedQuestions.length === 0) {
+                        setParseStatus({ type: "error", message: "Belum ada soal yang diparsing. Klik 'Parse Soal' terlebih dahulu." });
+                        return;
+                    }
+                    const allTexts = parsedQuestions.map(q => q.questionText);
+                    const validated = parsedQuestions.map((q, idx) => {
+                        const result = validateParsedQuestion(q);
+                        const isDuplicate = allTexts.indexOf(q.questionText) !== idx;
+                        if (isDuplicate) {
+                            if (!Array.isArray(result.validationWarnings)) {
+                                result.validationWarnings = [];
+                            }
+                            result.validationWarnings.push("Teks soal duplikat ditemukan.");
+                        }
+                        return result;
+                    });
+                    setParsedQuestions(validated);
+                    const valid = validated.filter(q => q.validationStatus === "VALID").length;
+                    const warn = validated.filter(q => q.validationStatus === "WARNING").length;
+                    const err = validated.filter(q => q.validationStatus === "ERROR").length;
+                    setParseStatus({ type: err > 0 ? "warning" : "success", message: `Validasi selesai: ${valid} VALID, ${warn} WARNING, ${err} ERROR.` });
+                } catch (e) {
+                    console.error("Error validating questions:", e);
+                    setParseStatus({ type: "error", message: `Terjadi error saat memproses soal: ${e.message}` });
                 }
-                const allTexts = parsedQuestions.map(q => q.questionText);
-                const validated = parsedQuestions.map((q, idx) => {
-                    const result = validateParsedQuestion(q);
-                    const isDuplicate = allTexts.indexOf(q.questionText) !== idx;
-                    if (isDuplicate) result.validationWarnings.push("Teks soal duplikat ditemukan.");
-                    return result;
-                });
-                setParsedQuestions(validated);
-                const valid = validated.filter(q => q.validationStatus === "VALID").length;
-                const warn = validated.filter(q => q.validationStatus === "WARNING").length;
-                const err = validated.filter(q => q.validationStatus === "ERROR").length;
-                setParseStatus({ type: err > 0 ? "warning" : "success", message: `Validasi selesai: ${valid} VALID, ${warn} WARNING, ${err} ERROR.` });
             };
 
             const handleAddToBank = () => {
-                if (parsedQuestions.length === 0) {
-                    setParseStatus({ type: "error", message: "Belum ada soal untuk ditambahkan. Parse dan validasi soal terlebih dahulu." });
-                    return;
+                try {
+                    if (parsedQuestions.length === 0) {
+                        setParseStatus({ type: "error", message: "Belum ada soal untuk ditambahkan. Parse dan validasi soal terlebih dahulu." });
+                        return;
+                    }
+                    const toAdd = parsedQuestions.filter(q => q.validationStatus !== "ERROR");
+                    const skipped = parsedQuestions.length - toAdd.length;
+                    if (toAdd.length === 0) {
+                        setParseStatus({ type: "error", message: "Semua soal memiliki error. Perbaiki soal terlebih dahulu sebelum menambahkan ke bank soal." });
+                        return;
+                    }
+                    const renumbered = toAdd.map((q, idx) => ({ ...q, number: (Array.isArray(bankSoalQuestions) ? bankSoalQuestions.length : 0) + idx + 1 }));
+                    setBankSoalQuestions(prev => [...(Array.isArray(prev) ? prev : []), ...renumbered]);
+                    setParseStatus({ type: "success", message: `${toAdd.length} soal berhasil ditambahkan ke bank soal.${skipped > 0 ? ` ${skipped} soal dilewati karena masih error.` : ""}` });
+                    setParsedQuestions([]);
+                    setRawQuestionInput("");
+                } catch (e) {
+                    console.error("Error adding questions to bank:", e);
+                    setParseStatus({ type: "error", message: `Terjadi error saat memproses soal: ${e.message}` });
                 }
-                const toAdd = parsedQuestions.filter(q => q.validationStatus !== "ERROR");
-                const skipped = parsedQuestions.length - toAdd.length;
-                if (toAdd.length === 0) {
-                    setParseStatus({ type: "error", message: "Semua soal memiliki error. Perbaiki soal terlebih dahulu sebelum menambahkan ke bank soal." });
-                    return;
-                }
-                const renumbered = toAdd.map((q, idx) => ({ ...q, number: bankSoalQuestions.length + idx + 1 }));
-                setBankSoalQuestions(prev => [...prev, ...renumbered]);
-                setParseStatus({ type: "success", message: `${toAdd.length} soal berhasil ditambahkan ke bank soal.${skipped > 0 ? ` ${skipped} soal dilewati karena masih error.` : ""}` });
-                setParsedQuestions([]);
-                setRawQuestionInput("");
             };
 
             const handleClearParser = () => {
@@ -1524,16 +1558,11 @@
                                     </div>
                                 </div>
 
-                                <div className="flex justify-between pt-6 border-t border-white/10">
-                                    <ButtonSecondary onClick={() => setStep(2)}>Kembali</ButtonSecondary>
-                                    <ButtonPrimary onClick={() => setStep(4)} icon="arrow-right">Lanjut ke Rubrik Sikap</ButtonPrimary>
-                                </div>
-
                                 {/* === BANK SOAL & PARSER SOAL (MVP 6) === */}
                                 <div className="mt-8 pt-8 border-t-2 border-dashed border-brand-500/30 space-y-6">
                                     <div className="border-b border-white/10 pb-5">
                                         <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-                                            <i data-lucide="scan-text" className="w-6 h-6 text-violet-400"></i>
+                                            <SafeIcon name="file-text" className="w-6 h-6 text-violet-400" />
                                             <span>Bank Soal &amp; Parser Soal</span>
                                             <span className="ml-2 text-xs font-semibold bg-violet-500/20 text-violet-300 border border-violet-500/30 px-2 py-0.5 rounded-lg">MVP 6</span>
                                         </h2>
@@ -1545,7 +1574,7 @@
                                     {/* RAW INPUT AREA */}
                                     <div className="space-y-3">
                                         <label className="text-sm font-semibold text-slate-300 flex items-center gap-2">
-                                            <i data-lucide="clipboard-paste" className="w-4 h-4 text-violet-400"></i>
+                                            <SafeIcon name="clipboard" className="w-4 h-4 text-violet-400" />
                                             <span>Tempel Teks Soal Mentah</span>
                                         </label>
                                         <textarea
@@ -1560,30 +1589,30 @@
                                                 onClick={handleParseQuestions}
                                                 className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-violet-600/30 transition-all"
                                             >
-                                                <i data-lucide="cpu" className="w-4 h-4"></i>
+                                                <SafeIcon name="cpu" className="w-4 h-4" />
                                                 <span>Parse Soal</span>
                                             </button>
                                             <button
                                                 onClick={handleValidateQuestions}
-                                                disabled={parsedQuestions.length === 0}
-                                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${parsedQuestions.length === 0 ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-600/20'}`}
+                                                disabled={!Array.isArray(parsedQuestions) || parsedQuestions.length === 0}
+                                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${(!Array.isArray(parsedQuestions) || parsedQuestions.length === 0) ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-600/20'}`}
                                             >
-                                                <i data-lucide="shield-check" className="w-4 h-4"></i>
+                                                <SafeIcon name="shield-check" className="w-4 h-4" />
                                                 <span>Validasi Soal</span>
                                             </button>
                                             <button
                                                 onClick={handleAddToBank}
-                                                disabled={parsedQuestions.filter(q => q.validationStatus !== 'ERROR').length === 0}
-                                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${parsedQuestions.filter(q => q.validationStatus !== 'ERROR').length === 0 ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20'}`}
+                                                disabled={!Array.isArray(parsedQuestions) || parsedQuestions.filter(q => q.validationStatus !== 'ERROR').length === 0}
+                                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${(!Array.isArray(parsedQuestions) || parsedQuestions.filter(q => q.validationStatus !== 'ERROR').length === 0) ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20'}`}
                                             >
-                                                <i data-lucide="library-add" className="w-4 h-4"></i>
+                                                <SafeIcon name="plus-circle" className="w-4 h-4" />
                                                 <span>Tambah ke Bank Soal</span>
                                             </button>
                                             <button
                                                 onClick={handleClearParser}
                                                 className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-slate-300 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border border-white/10"
                                             >
-                                                <i data-lucide="trash-2" className="w-4 h-4"></i>
+                                                <SafeIcon name="trash-2" className="w-4 h-4" />
                                                 <span>Bersihkan Input</span>
                                             </button>
                                         </div>
@@ -1595,14 +1624,14 @@
                                                 : parseStatus.type === 'warning' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                                                 : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                                             }`}>
-                                                <i data-lucide={parseStatus.type === 'error' ? 'alert-circle' : parseStatus.type === 'warning' ? 'alert-triangle' : 'check-circle'} className="w-4 h-4 shrink-0 mt-0.5"></i>
+                                                <SafeIcon name={parseStatus.type === 'error' ? 'alert-circle' : parseStatus.type === 'warning' ? 'alert-triangle' : 'check-circle'} className="w-4 h-4 shrink-0 mt-0.5" />
                                                 <span>{parseStatus.message}</span>
                                             </div>
                                         )}
                                     </div>
 
                                     {/* PARSED QUESTION REVIEW LIST */}
-                                    {parsedQuestions.length > 0 && (
+                                    {Array.isArray(parsedQuestions) && parsedQuestions.length > 0 && (
                                         <div className="space-y-3">
                                             <h3 className="text-sm font-bold text-white flex items-center gap-2 border-l-4 border-violet-400 pl-3">
                                                 <span>Hasil Parsing ({parsedQuestions.length} soal) — Review &amp; Edit</span>
@@ -1622,12 +1651,15 @@
                                                         ERROR:   'bg-rose-600/80 text-white'
                                                     };
                                                     const isEditing = editingQuestionIdx === idx;
+                                                    const safeOptions = Array.isArray(q.options) ? q.options : [];
+                                                    const validationErrors = Array.isArray(q.validationErrors) ? q.validationErrors : [];
+                                                    const validationWarnings = Array.isArray(q.validationWarnings) ? q.validationWarnings : [];
                                                     return (
-                                                        <div key={q.id || idx} className={`rounded-2xl border p-4 space-y-3 transition-all ${statusColors[q.validationStatus] || statusColors.DRAFT}`}>
+                                                        <div key={q.id || idx} className={`rounded-2xl border p-4 space-y-3 transition-all ${statusColors[q.validationStatus || 'DRAFT'] || statusColors.DRAFT}`}>
                                                             <div className="flex items-center justify-between flex-wrap gap-2">
                                                                 <div className="flex items-center gap-2 flex-wrap">
                                                                     <span className="font-bold text-white text-xs bg-violet-600/70 px-2.5 py-1 rounded-lg">#{q.number}</span>
-                                                                    <span className={`text-xs font-bold px-2 py-1 rounded-lg ${badgeColors[q.validationStatus] || badgeColors.DRAFT}`}>{q.validationStatus}</span>
+                                                                    <span className={`text-xs font-bold px-2 py-1 rounded-lg ${badgeColors[q.validationStatus || 'DRAFT'] || badgeColors.DRAFT}`}>{q.validationStatus || 'DRAFT'}</span>
                                                                     {q.answerKey && <span className="text-xs bg-slate-800 border border-white/10 px-2 py-1 rounded-lg text-emerald-300 font-mono">Kunci: {q.answerKey}</span>}
                                                                     {q.cognitiveLevel && <span className="text-xs bg-slate-800 border border-white/10 px-2 py-1 rounded-lg text-brand-300">{q.cognitiveLevel}</span>}
                                                                     <span className="text-xs text-slate-500">PG</span>
@@ -1679,7 +1711,7 @@
                                                                     {q.stimulus && <p className="text-xs text-slate-400 italic border-l-2 border-slate-600 pl-2">{q.stimulus}</p>}
                                                                     <p className="text-sm text-slate-200 leading-relaxed">{q.questionText || <span className="text-rose-400 italic">Teks soal kosong</span>}</p>
                                                                     <div className="grid grid-cols-2 gap-1.5">
-                                                                        {q.options.map((opt, oi) => (
+                                                                        {safeOptions.map((opt, oi) => (
                                                                             <div key={oi} className={`text-xs px-2.5 py-1.5 rounded-lg font-medium ${
                                                                                 opt.key === q.answerKey
                                                                                     ? 'bg-emerald-900/40 border border-emerald-500/30 text-emerald-300'
@@ -1687,10 +1719,10 @@
                                                                             }`}>{opt.key}. {opt.text}</div>
                                                                         ))}
                                                                     </div>
-                                                                    {(q.validationErrors.length > 0 || q.validationWarnings.length > 0) && (
+                                                                    {(validationErrors.length > 0 || validationWarnings.length > 0) && (
                                                                         <div className="text-xs space-y-1 pt-1">
-                                                                            {q.validationErrors.map((e, ei) => <div key={ei} className="text-rose-400 flex items-start gap-1"><i data-lucide="x-circle" className="w-3.5 h-3.5 mt-0.5 shrink-0"></i>{e}</div>)}
-                                                                            {q.validationWarnings.map((w, wi) => <div key={wi} className="text-amber-400 flex items-start gap-1"><i data-lucide="alert-triangle" className="w-3.5 h-3.5 mt-0.5 shrink-0"></i>{w}</div>)}
+                                                                            {validationErrors.map((e, ei) => <div key={ei} className="text-rose-400 flex items-start gap-1"><SafeIcon name="x-circle" className="w-3.5 h-3.5 mt-0.5 shrink-0" />{e}</div>)}
+                                                                            {validationWarnings.map((w, wi) => <div key={wi} className="text-amber-400 flex items-start gap-1"><SafeIcon name="alert-triangle" className="w-3.5 h-3.5 mt-0.5 shrink-0" />{w}</div>)}
                                                                         </div>
                                                                     )}
                                                                 </div>
@@ -1703,10 +1735,10 @@
                                     )}
 
                                     {/* BANK SOAL DISPLAY */}
-                                    {bankSoalQuestions.length > 0 && (
+                                    {Array.isArray(bankSoalQuestions) && bankSoalQuestions.length > 0 && (
                                         <div className="space-y-3 pt-4 border-t border-white/10">
                                             <h3 className="text-sm font-bold text-white flex items-center gap-2 border-l-4 border-emerald-400 pl-3">
-                                                <i data-lucide="database" className="w-4 h-4 text-emerald-400"></i>
+                                                <SafeIcon name="database" className="w-4 h-4 text-emerald-400" />
                                                 <span>Bank Soal Tervalidasi ({bankSoalQuestions.length} soal)</span>
                                             </h3>
                                             <div className="overflow-x-auto rounded-2xl border border-white/10">
@@ -1744,7 +1776,7 @@
                                                                         className="text-rose-400 hover:text-rose-300 transition-colors"
                                                                         title="Hapus dari bank soal"
                                                                     >
-                                                                        <i data-lucide="trash-2" className="w-4 h-4"></i>
+                                                                        <SafeIcon name="trash-2" className="w-4 h-4" />
                                                                     </button>
                                                                 </td>
                                                             </tr>
@@ -1756,6 +1788,11 @@
                                     )}
                                 </div>
                                 {/* === END BANK SOAL & PARSER SOAL === */}
+
+                                <div className="flex justify-between pt-6 border-t border-white/10">
+                                    <ButtonSecondary onClick={() => setStep(2)}>Kembali</ButtonSecondary>
+                                    <ButtonPrimary onClick={() => setStep(4)} icon="arrow-right">Lanjut ke Rubrik Sikap</ButtonPrimary>
+                                </div>
 
                             </div>
                         )}
