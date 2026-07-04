@@ -588,7 +588,7 @@
                     const allTexts = parsedQuestions.map(q => q.questionText);
                     const validated = parsedQuestions.map((q, idx) => {
                         const result = validateParsedQuestion(q);
-                        const isDuplicate = allTexts.indexOf(q.questionText) !== idx;
+                        const isDuplicate = q.questionText && q.questionText.trim() && allTexts.indexOf(q.questionText) !== idx;
                         if (isDuplicate) {
                             if (!Array.isArray(result.validationWarnings)) {
                                 result.validationWarnings = [];
@@ -614,14 +614,28 @@
                         setParseStatus({ type: "error", message: "Belum ada soal untuk ditambahkan. Parse dan validasi soal terlebih dahulu." });
                         return;
                     }
+                    const hasDraft = parsedQuestions.some(q => q.validationStatus === "DRAFT");
+                    if (hasDraft) {
+                        setParseStatus({
+                            type: "error",
+                            message: "Beberapa soal belum divalidasi. Silakan klik 'Validasi Soal' terlebih dahulu."
+                        });
+                        return;
+                    }
                     const toAdd = parsedQuestions.filter(q => q.validationStatus !== "ERROR");
                     const skipped = parsedQuestions.length - toAdd.length;
                     if (toAdd.length === 0) {
                         setParseStatus({ type: "error", message: "Semua soal memiliki error. Perbaiki soal terlebih dahulu sebelum menambahkan ke bank soal." });
                         return;
                     }
-                    const renumbered = toAdd.map((q, idx) => ({ ...q, number: (Array.isArray(bankSoalQuestions) ? bankSoalQuestions.length : 0) + idx + 1 }));
-                    setBankSoalQuestions(prev => [...(Array.isArray(prev) ? prev : []), ...renumbered]);
+                    setBankSoalQuestions(prev => {
+                        const currentList = Array.isArray(prev) ? prev : [];
+                        const renumbered = toAdd.map((q, idx) => ({
+                            ...q,
+                            number: currentList.length + idx + 1
+                        }));
+                        return [...currentList, ...renumbered];
+                    });
                     setParseStatus({ type: "success", message: `${toAdd.length} soal berhasil ditambahkan ke bank soal.${skipped > 0 ? ` ${skipped} soal dilewati karena masih error.` : ""}` });
                     setParsedQuestions([]);
                     setRawQuestionInput("");
@@ -734,7 +748,11 @@
 
             useEffect(() => {
                 if (window.lucide) window.lucide.createIcons();
-            });
+            }, [step, importStatus]);
+
+            useEffect(() => {
+                if (window.lucide) window.lucide.createIcons();
+            }, [parsedQuestions, bankSoalQuestions, parseStatus, editingQuestionIdx]);
 
             const handleInputChange = (e) => {
                 const { name, value } = e.target;
@@ -1080,6 +1098,19 @@
             };
 
             const handleExportFinalJSON = () => {
+                const mapQuestionValidationStatus = (status) => {
+                    if (status === "VALID" || status === "WARNING") return "Valid";
+                    if (status === "ERROR") return "Revision Required";
+                    return "Pending";
+                };
+
+                const normalizeCognitiveLevel = (level) => {
+                    const normalized = String(level || "").substring(0, 2).toUpperCase();
+                    return ["C1", "C2", "C3", "C4", "C5", "C6"].includes(normalized)
+                        ? normalized
+                        : "C3";
+                };
+
                 const slugify = (str) => (str || "untitled").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
                 const dateStr = new Date().toISOString().split("T")[0];
                 const metaSchool = formData.sekolah || (importedDraft && importedDraft.metadata && importedDraft.metadata.school) || "";
@@ -1157,16 +1188,21 @@
                             type: "Pilihan Ganda",
                             stimulus: q.stimulus || "",
                             questionText: q.questionText || "",
-                            options: q.options.reduce((acc, o) => { acc[o.key] = o.text; return acc; }, {}),
+                            options: Array.isArray(q.options)
+                                ? q.options.reduce((acc, o) => {
+                                    if (o && o.key) acc[o.key] = o.text || "";
+                                    return acc;
+                                  }, {})
+                                : {},
                             correctAnswer: q.answerKey || "",
-                            cognitiveLevel: (q.cognitiveLevel || "").substring(0, 2).toUpperCase() || undefined,
+                            cognitiveLevel: normalizeCognitiveLevel(q.cognitiveLevel),
                             indicator: q.indicator || "",
                             topic: q.material || metaTopic,
                             subject: metaSubject,
                             grade: metaGrade,
                             score: q.score || 1,
                             explanation: q.explanation || "",
-                            validationStatus: q.validationStatus
+                            validationStatus: mapQuestionValidationStatus(q.validationStatus)
                           }))
                         : importedDraft ? [] : [
                         ...formData.soalPG.map(q => ({
@@ -1711,13 +1747,13 @@
                                                                     {q.stimulus && <p className="text-xs text-slate-400 italic border-l-2 border-slate-600 pl-2">{q.stimulus}</p>}
                                                                     <p className="text-sm text-slate-200 leading-relaxed">{q.questionText || <span className="text-rose-400 italic">Teks soal kosong</span>}</p>
                                                                     <div className="grid grid-cols-2 gap-1.5">
-                                                                        {safeOptions.map((opt, oi) => (
+                                                                        {safeOptions.map((opt, oi) => opt && opt.key ? (
                                                                             <div key={oi} className={`text-xs px-2.5 py-1.5 rounded-lg font-medium ${
                                                                                 opt.key === q.answerKey
                                                                                     ? 'bg-emerald-900/40 border border-emerald-500/30 text-emerald-300'
                                                                                     : 'bg-slate-800/50 border border-white/5 text-slate-300'
-                                                                            }`}>{opt.key}. {opt.text}</div>
-                                                                        ))}
+                                                                            }`}>{opt.key}. {opt.text || ""}</div>
+                                                                        ) : null)}
                                                                     </div>
                                                                     {(validationErrors.length > 0 || validationWarnings.length > 0) && (
                                                                         <div className="text-xs space-y-1 pt-1">
