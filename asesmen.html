@@ -353,22 +353,36 @@
             );
         };
 
+        const SafeIcon = ({ name, className = "w-4 h-4" }) => {
+            return <span className="inline-flex items-center justify-center shrink-0" dangerouslySetInnerHTML={{ __html: `<i data-lucide="${name}" class="${className}"></i>` }} />;
+        };
+
         const ButtonPrimary = ({ children, onClick, icon, disabled }) => (
             <button onClick={onClick} disabled={disabled} className={`flex items-center justify-center gap-2 bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-500 hover:to-brand-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg shadow-brand-600/30 hover:shadow-brand-600/50 hover:-translate-y-0.5 transition-all duration-200 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                {icon && <i data-lucide={icon} className="w-4 h-4"></i>}
+                {icon && <SafeIcon name={icon} className="w-4 h-4" />}
                 <span>{children}</span>
             </button>
         );
 
         const ButtonSecondary = ({ children, onClick, icon }) => (
             <button onClick={onClick} className="flex items-center justify-center gap-2 bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-6 rounded-xl border border-white/10 hover:border-white/20 hover:-translate-y-0.5 transition-all duration-200">
-                {icon && <i data-lucide={icon} className="w-4 h-4"></i>}
+                {icon && <SafeIcon name={icon} className="w-4 h-4" />}
                 <span>{children}</span>
             </button>
         );
 
         // --- MAIN APPLICATION ---
         function App() {
+            const generateUUID = () => {
+                if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                    return crypto.randomUUID();
+                }
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    const r = Math.random() * 16 | 0;
+                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            };
             const [step, setStep] = useState(1);
             const [selectedFase, setSelectedFase] = useState("Fase D (SMP/MTs Grade 7-9)");
             const [selectedMapel, setSelectedMapel] = useState("Ilmu Pengetahuan Alam (IPA)");
@@ -376,6 +390,13 @@
 
             const [importStatus, setImportStatus] = useState({ type: null, message: "" });
             const [importedDraft, setImportedDraft] = useState(null);
+
+            // --- MVP 6: Question Bank Parser State ---
+            const [rawQuestionInput, setRawQuestionInput] = useState("");
+            const [parsedQuestions, setParsedQuestions] = useState([]);
+            const [parseStatus, setParseStatus] = useState({ type: null, message: "" });
+            const [bankSoalQuestions, setBankSoalQuestions] = useState([]);
+            const [editingQuestionIdx, setEditingQuestionIdx] = useState(null);
 
             const [formData, setFormData] = useState({
                 sekolah: "SMP Negeri 2 Karangtengah",
@@ -404,15 +425,246 @@
                 catatanUmum: "Instrumen asesmen ini dirancang berbasis prinsip Deep Learning dan pedoman asesmen Kurikulum Merdeka BSKAP No. 046/H/KR/2026."
             });
 
-            const generateUUID = () => {
-                if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-                    return crypto.randomUUID();
-                }
-                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                    const r = Math.random() * 16 | 0;
-                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-                    return v.toString(16);
+            // --- BROWSER-COMPATIBLE PARSER ADAPTER ---
+            // NOTE: This adapter mirrors the logic of src/engines/questionParserEngine.js.
+            // It is inlined here because asesmen.html is a static browser file without a build system.
+            // Replace this with a proper module import when migrating to a build-system (e.g. Vite).
+            const parseQuestionsFromText = (rawText) => {
+                if (!rawText || typeof rawText !== 'string') return [];
+                const normalizedText = rawText.replace(/\r\n/g, '\n').trim();
+                if (!normalizedText) return [];
+
+                const blockRegex = /(?:^|\n)(?=\d+[\.\)]\s+)/;
+                const rawBlocks = normalizedText.split(blockRegex).map(b => b.trim()).filter(Boolean);
+                const results = [];
+
+                rawBlocks.forEach((block, idx) => {
+                    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+                    if (lines.length === 0) return;
+
+                    let number = idx + 1;
+                    const firstLine = lines[0];
+                    const numMatch = firstLine.match(/^(\d+)[\.\)]\s*(.*)/);
+
+                    let preOptionLines = [];
+                    if (numMatch) {
+                        number = parseInt(numMatch[1], 10);
+                        if (numMatch[2]) preOptionLines.push(numMatch[2]);
+                    } else {
+                        preOptionLines.push(firstLine);
+                    }
+
+                    const optionsList = [];
+                    let correctAnswer = "";
+                    let indicator = "";
+                    let cognitiveLevel = "";
+                    let topic = "";
+                    let explanation = "";
+                    let score = 1;
+                    let currentSection = "pre";
+                    let currentOptionIndex = -1;
+
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i];
+
+                        const keyMatch = line.match(/^(?:Kunci(?: Jawaban)?|Jawaban)\s*:\s*(.*)/i);
+                        if (keyMatch) {
+                            const rawKey = keyMatch[1].trim();
+                            const letterMatch = rawKey.match(/^([A-E])(?:\.|\)|\s|$)/i);
+                            correctAnswer = letterMatch ? letterMatch[1].toUpperCase() : rawKey.toUpperCase();
+                            currentSection = "meta"; continue;
+                        }
+                        const indMatch = line.match(/^Indikator(?: Soal)?\s*:\s*(.*)/i);
+                        if (indMatch) { indicator = indMatch[1].trim(); currentSection = "meta"; continue; }
+
+                        const levelMatch = line.match(/^(?:Level(?: Kognitif)?|Bloom|Ranah)\s*:\s*(.*)/i);
+                        if (levelMatch) { cognitiveLevel = levelMatch[1].trim(); currentSection = "meta"; continue; }
+
+                        const topicMatch = line.match(/^(?:Materi|Topik|Lingkup Materi)\s*:\s*(.*)/i);
+                        if (topicMatch) { topic = topicMatch[1].trim(); currentSection = "meta"; continue; }
+
+                        const pembMatch = line.match(/^(?:Pembahasan|Penjelasan|Keterangan)\s*:\s*(.*)/i);
+                        if (pembMatch) { explanation = pembMatch[1].trim(); currentSection = "meta"; continue; }
+
+                        const scoreMatch = line.match(/^(?:Skor|Bobot|Poin)\s*:\s*(.*)/i);
+                        if (scoreMatch) { const n = parseFloat(scoreMatch[1]); if (!isNaN(n) && n > 0) score = n; currentSection = "meta"; continue; }
+
+                        const optMatch = line.match(/^([A-Ea-e])[\.\)]\s+(.*)/);
+                        if (optMatch) {
+                            currentSection = "option";
+                            optionsList.push({ key: optMatch[1].toUpperCase(), text: optMatch[2].trim() });
+                            currentOptionIndex = optionsList.length - 1;
+                            continue;
+                        }
+
+                        if (currentSection === "option" && currentOptionIndex >= 0) {
+                            optionsList[currentOptionIndex].text += " " + line;
+                        } else if (currentSection === "pre") {
+                            preOptionLines.push(line);
+                        }
+                    }
+
+                    let stimulus = "";
+                    let questionText = "";
+                    if (preOptionLines.length === 1) {
+                        questionText = preOptionLines[0];
+                    } else if (preOptionLines.length > 1) {
+                        questionText = preOptionLines[preOptionLines.length - 1];
+                        stimulus = preOptionLines.slice(0, preOptionLines.length - 1).join('\n');
+                    }
+
+                    results.push({
+                        id: generateUUID(),
+                        number,
+                        type: "pilihan_ganda",
+                        stimulus,
+                        questionText,
+                        options: optionsList,
+                        answerKey: correctAnswer,
+                        correctAnswer,
+                        cognitiveLevel,
+                        indicator,
+                        material: topic,
+                        score,
+                        explanation,
+                        validationStatus: "DRAFT",
+                        validationErrors: [],
+                        validationWarnings: []
+                    });
                 });
+
+                return results;
+            };
+
+            // --- BROWSER-COMPATIBLE VALIDATOR ADAPTER ---
+            // NOTE: Mirrors src/engines/questionValidatorEngine.js — inline for static browser use.
+            const validateParsedQuestion = (q) => {
+                const errors = [];
+                const warnings = [];
+                if (!q.questionText || !q.questionText.trim()) errors.push("Teks soal tidak boleh kosong.");
+                if (!Array.isArray(q.options) || q.options.length < 4) errors.push("Soal pilihan ganda harus memiliki minimal 4 opsi.");
+                if (!q.answerKey || !q.answerKey.trim()) {
+                    errors.push("Kunci jawaban wajib diisi.");
+                } else if (Array.isArray(q.options) && q.options.length > 0) {
+                    const keys = q.options.map(o => (o.key || "").toUpperCase());
+                    if (!keys.includes(q.answerKey.toUpperCase())) errors.push(`Kunci jawaban '${q.answerKey}' tidak ditemukan di opsi (${keys.join(", ")}).`);
+                }
+                const validLevels = ["C1", "C2", "C3", "C4", "C5", "C6"];
+                const lvl = (q.cognitiveLevel || "").trim().toUpperCase().substring(0, 2);
+                if (!lvl || !validLevels.includes(lvl)) warnings.push(`Level kognitif '${q.cognitiveLevel || "kosong"}' bukan C1-C6.`);
+                if (!q.indicator || !q.indicator.trim()) warnings.push("Indikator soal sebaiknya diisi.");
+                const status = errors.length > 0 ? "ERROR" : (warnings.length > 0 ? "WARNING" : "VALID");
+                return { ...q, validationStatus: status, validationErrors: errors, validationWarnings: warnings };
+            };
+
+            // --- MVP 6: Parser Event Handlers ---
+            const handleParseQuestions = () => {
+                try {
+                    const text = rawQuestionInput.trim();
+                    if (!text) {
+                        setParseStatus({ type: "error", message: "Input teks soal tidak boleh kosong." });
+                        return;
+                    }
+                    const results = parseQuestionsFromText(text);
+                    if (results.length === 0) {
+                        setParseStatus({ type: "error", message: "Tidak ada soal yang berhasil diparsing. Pastikan format soal sesuai (nomor. teks soal, A. opsi, ..., Kunci: X)." });
+                        return;
+                    }
+                    setParsedQuestions(results);
+                    setParseStatus({ type: "success", message: `${results.length} soal berhasil diparsing. Klik 'Validasi Soal' untuk memeriksa kualitas soal.` });
+                    setEditingQuestionIdx(null);
+                } catch (e) {
+                    console.error("Error parsing questions:", e);
+                    setParseStatus({ type: "error", message: `Terjadi error saat memproses soal: ${e.message}` });
+                }
+            };
+
+            const handleValidateQuestions = () => {
+                try {
+                    if (parsedQuestions.length === 0) {
+                        setParseStatus({ type: "error", message: "Belum ada soal yang diparsing. Klik 'Parse Soal' terlebih dahulu." });
+                        return;
+                    }
+                    const allTexts = parsedQuestions.map(q => q.questionText);
+                    const validated = parsedQuestions.map((q, idx) => {
+                        const result = validateParsedQuestion(q);
+                        const isDuplicate = q.questionText && q.questionText.trim() && allTexts.indexOf(q.questionText) !== idx;
+                        if (isDuplicate) {
+                            if (!Array.isArray(result.validationWarnings)) {
+                                result.validationWarnings = [];
+                            }
+                            result.validationWarnings.push("Teks soal duplikat ditemukan.");
+                        }
+                        return result;
+                    });
+                    setParsedQuestions(validated);
+                    const valid = validated.filter(q => q.validationStatus === "VALID").length;
+                    const warn = validated.filter(q => q.validationStatus === "WARNING").length;
+                    const err = validated.filter(q => q.validationStatus === "ERROR").length;
+                    setParseStatus({ type: err > 0 ? "warning" : "success", message: `Validasi selesai: ${valid} VALID, ${warn} WARNING, ${err} ERROR.` });
+                } catch (e) {
+                    console.error("Error validating questions:", e);
+                    setParseStatus({ type: "error", message: `Terjadi error saat memproses soal: ${e.message}` });
+                }
+            };
+
+            const handleAddToBank = () => {
+                try {
+                    if (parsedQuestions.length === 0) {
+                        setParseStatus({ type: "error", message: "Belum ada soal untuk ditambahkan. Parse dan validasi soal terlebih dahulu." });
+                        return;
+                    }
+                    const hasDraft = parsedQuestions.some(q => q.validationStatus === "DRAFT");
+                    if (hasDraft) {
+                        setParseStatus({
+                            type: "error",
+                            message: "Beberapa soal belum divalidasi. Silakan klik 'Validasi Soal' terlebih dahulu."
+                        });
+                        return;
+                    }
+                    const toAdd = parsedQuestions.filter(q => q.validationStatus !== "ERROR");
+                    const skipped = parsedQuestions.length - toAdd.length;
+                    if (toAdd.length === 0) {
+                        setParseStatus({ type: "error", message: "Semua soal memiliki error. Perbaiki soal terlebih dahulu sebelum menambahkan ke bank soal." });
+                        return;
+                    }
+                    setBankSoalQuestions(prev => {
+                        const currentList = Array.isArray(prev) ? prev : [];
+                        const renumbered = toAdd.map((q, idx) => ({
+                            ...q,
+                            number: currentList.length + idx + 1
+                        }));
+                        return [...currentList, ...renumbered];
+                    });
+                    setParseStatus({ type: "success", message: `${toAdd.length} soal berhasil ditambahkan ke bank soal.${skipped > 0 ? ` ${skipped} soal dilewati karena masih error.` : ""}` });
+                    setParsedQuestions([]);
+                    setRawQuestionInput("");
+                } catch (e) {
+                    console.error("Error adding questions to bank:", e);
+                    setParseStatus({ type: "error", message: `Terjadi error saat memproses soal: ${e.message}` });
+                }
+            };
+
+            const handleClearParser = () => {
+                setRawQuestionInput("");
+                setParsedQuestions([]);
+                setParseStatus({ type: null, message: "" });
+                setEditingQuestionIdx(null);
+            };
+
+            const handleRemoveParsed = (idx) => {
+                setParsedQuestions(prev => prev.filter((_, i) => i !== idx));
+            };
+
+            const handleRemoveFromBank = (idx) => {
+                setBankSoalQuestions(prev => {
+                    const updated = prev.filter((_, i) => i !== idx);
+                    return updated.map((q, i) => ({ ...q, number: i + 1 }));
+                });
+            };
+
+            const handleEditParsedField = (idx, field, value) => {
+                setParsedQuestions(prev => prev.map((q, i) => i === idx ? { ...q, [field]: value } : q));
             };
 
             // Update Mapel options when Fase changes
@@ -497,6 +749,10 @@
             useEffect(() => {
                 if (window.lucide) window.lucide.createIcons();
             }, [step, importStatus]);
+
+            useEffect(() => {
+                if (window.lucide) window.lucide.createIcons();
+            }, [parsedQuestions, bankSoalQuestions, parseStatus, editingQuestionIdx]);
 
             const handleInputChange = (e) => {
                 const { name, value } = e.target;
@@ -842,6 +1098,19 @@
             };
 
             const handleExportFinalJSON = () => {
+                const mapQuestionValidationStatus = (status) => {
+                    if (status === "VALID" || status === "WARNING") return "Valid";
+                    if (status === "ERROR") return "Revision Required";
+                    return "Pending";
+                };
+
+                const normalizeCognitiveLevel = (level) => {
+                    const normalized = String(level || "").substring(0, 2).toUpperCase();
+                    return ["C1", "C2", "C3", "C4", "C5", "C6"].includes(normalized)
+                        ? normalized
+                        : "C3";
+                };
+
                 const slugify = (str) => (str || "untitled").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
                 const dateStr = new Date().toISOString().split("T")[0];
                 const metaSchool = formData.sekolah || (importedDraft && importedDraft.metadata && importedDraft.metadata.school) || "";
@@ -912,7 +1181,30 @@
                         weight: Number(String(item.weight || item.bobot || "20").replace(/[^0-9]/g, "")) || 20,
                         estimatedQuestionCount: item.estimatedQuestionCount || (String(item.questionType || item.bentuk).toLowerCase().includes("uraian") ? 1 : 2)
                     })),
-                    questions: importedDraft ? [] : [
+                    questions: bankSoalQuestions.length > 0
+                        ? bankSoalQuestions.map(q => ({
+                            questionId: q.id || generateUUID(),
+                            number: q.number,
+                            type: "Pilihan Ganda",
+                            stimulus: q.stimulus || "",
+                            questionText: q.questionText || "",
+                            options: Array.isArray(q.options)
+                                ? q.options.reduce((acc, o) => {
+                                    if (o && o.key) acc[o.key] = o.text || "";
+                                    return acc;
+                                  }, {})
+                                : {},
+                            correctAnswer: q.answerKey || "",
+                            cognitiveLevel: normalizeCognitiveLevel(q.cognitiveLevel),
+                            indicator: q.indicator || "",
+                            topic: q.material || metaTopic,
+                            subject: metaSubject,
+                            grade: metaGrade,
+                            score: q.score || 1,
+                            explanation: q.explanation || "",
+                            validationStatus: mapQuestionValidationStatus(q.validationStatus)
+                          }))
+                        : importedDraft ? [] : [
                         ...formData.soalPG.map(q => ({
                             questionId: generateUUID(),
                             number: q.no,
@@ -933,7 +1225,9 @@
                             cognitiveLevel: q.level || "C5"
                         }))
                     ],
-                    answerKey: importedDraft ? [] : [
+                    answerKey: bankSoalQuestions.length > 0
+                        ? bankSoalQuestions.map(q => ({ number: q.number, answer: q.answerKey, explanation: q.explanation || "" }))
+                        : importedDraft ? [] : [
                         ...formData.soalPG.map(q => ({
                             number: q.no,
                             answer: q.kunci,
@@ -951,13 +1245,15 @@
                         rubrics: formData.rubrikSikap || []
                     },
                     imageAssets: [],
-                    validationReport: importedDraft && importedDraft.validationReport ? {
-                        ...importedDraft.validationReport,
-                        status: "VALIDATED",
-                        isValidated: true
-                    } : {
+                    validationReport: {
+                        ...(importedDraft && importedDraft.validationReport ? importedDraft.validationReport : {}),
                         status: "VALIDATED",
                         isValidated: true,
+                        bloomDistribution: bankSoalQuestions.reduce((acc, q) => {
+                            const lvl = (q.cognitiveLevel || "unknown").substring(0, 2).toUpperCase();
+                            acc[lvl] = (acc[lvl] || 0) + 1;
+                            return acc;
+                        }, {}),
                         warnings: []
                     },
                     exportTargets: ["JSON"],
@@ -982,8 +1278,8 @@
                     <header className="sticky top-0 z-40 glass-panel border-b border-white/10 no-print">
                         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className="bg-gradient-to-br from-brand-500 to-brand-700 p-3 rounded-2xl shadow-lg shadow-brand-500/30 flex items-center justify-center">
-                                    <i data-lucide="award" className="w-7 h-7 text-white"></i>
+                                <div className="bg-brand-600 p-3 rounded-2xl shadow-lg shadow-brand-600/30">
+                                    <SafeIcon name="award" className="w-7 h-7 text-white" />
                                 </div>
                                 <div>
                                     <h1 className="text-xl font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
@@ -998,17 +1294,17 @@
 
                             <div className="flex items-center gap-3">
                                 <a href="index.html" className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-white/10 text-xs font-semibold transition-all shadow-md">
-                                    <i data-lucide="arrow-left" className="w-4 h-4"></i>
+                                    <SafeIcon name="arrow-left" className="w-4 h-4" />
                                     <span>Kembali ke RPP Generator</span>
                                 </a>
                                 {step === 5 && (
                                     <div className="flex items-center gap-2">
                                         <button onClick={handleExportFinalJSON} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-indigo-600/30 transition-all">
-                                            <i data-lucide="download" className="w-4 h-4"></i>
+                                            <SafeIcon name="download" className="w-4 h-4" />
                                             <span>Export Assessment Final JSON</span>
                                         </button>
                                         <button onClick={handlePrint} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-emerald-600/30 hover:scale-105 transition-all">
-                                            <i data-lucide="printer" className="w-4 h-4"></i>
+                                            <SafeIcon name="printer" className="w-4 h-4" />
                                             <span>Cetak Dokumen / PDF</span>
                                         </button>
                                     </div>
@@ -1019,7 +1315,7 @@
 
                     {/* EXPERIMENTAL PROTOTYPE BANNER */}
                     <div className="bg-amber-500/20 border-b border-amber-500/30 text-amber-300 px-6 py-2.5 text-xs font-semibold text-center no-print flex items-center justify-center gap-2">
-                        <i data-lucide="alert-triangle" className="w-4 h-4 text-amber-400 inline"></i>
+                        <SafeIcon name="alert-triangle" className="w-4 h-4 text-amber-400 inline" />
                         <span>Experimental Prototype — not yet connected to RPP JSON export or Google Form Builder.</span>
                     </div>
 
@@ -1040,7 +1336,7 @@
                                         className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${step === item.num ? 'bg-gradient-to-r from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 scale-105' : step > item.num ? 'bg-slate-800/80 text-emerald-400 border border-emerald-500/30' : 'bg-slate-900/50 text-slate-400 hover:bg-slate-800 border border-white/5'}`}
                                     >
                                         <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs ${step === item.num ? 'bg-white/20 text-white' : step > item.num ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400'}`}>
-                                            {step > item.num ? <i data-lucide="check" className="w-3.5 h-3.5"></i> : item.num}
+                                            {step > item.num ? <SafeIcon name="check" className="w-3.5 h-3.5" /> : item.num}
                                         </div>
                                         <span>{item.label}</span>
                                     </button>
@@ -1056,7 +1352,7 @@
                             <div className="glass-panel rounded-3xl p-8 space-y-8 no-print animate-fade-in">
                                 <div className="border-b border-white/10 pb-5">
                                     <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-                                        <i data-lucide="settings" className="w-6 h-6 text-brand-400"></i>
+                                        <SafeIcon name="settings" className="w-6 h-6 text-brand-400" />
                                         <span>Tahap 1: Konfigurasi Identitas & Pemetaan Kurikulum</span>
                                     </h2>
                                     <p className="text-sm text-slate-400 mt-1">
@@ -1068,7 +1364,7 @@
                                     <div className="flex items-center justify-between flex-wrap gap-3">
                                         <div>
                                             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                                                <i data-lucide="upload-cloud" className="w-5 h-5 text-brand-400"></i>
+                                                <SafeIcon name="upload-cloud" className="w-5 h-5 text-brand-400" />
                                                 <span>Import Draft Asesmen JSON</span>
                                             </h3>
                                             <p className="text-xs text-slate-400 mt-0.5">
@@ -1077,7 +1373,7 @@
                                         </div>
                                         <div>
                                             <label className="cursor-pointer bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-lg shadow-brand-600/30 flex items-center gap-2">
-                                                <i data-lucide="file-input" className="w-4 h-4"></i>
+                                                <SafeIcon name="file-input" className="w-4 h-4" />
                                                 <span>Pilih Berkas JSON...</span>
                                                 <input type="file" accept=".json,application/json" onChange={handleFileImport} className="hidden" />
                                             </label>
@@ -1085,14 +1381,14 @@
                                     </div>
                                     {importStatus.message && (
                                         <div className={`p-3 rounded-xl text-xs font-medium flex items-center gap-2.5 ${importStatus.type === 'error' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}`}>
-                                            <i data-lucide={importStatus.type === 'error' ? 'alert-circle' : 'check-circle'} className="w-4 h-4 shrink-0"></i>
+                                            <SafeIcon name={importStatus.type === 'error' ? 'alert-circle' : 'check-circle'} className="w-4 h-4 shrink-0" />
                                             <span>{importStatus.message}</span>
                                         </div>
                                     )}
                                     {importStatus.type === 'success' && importedDraft && (
                                         <div className="bg-slate-900/80 border border-emerald-500/30 rounded-2xl p-4 space-y-3 animate-fade-in text-xs">
                                             <div className="text-emerald-400 font-bold border-b border-white/10 pb-2 flex items-center gap-2">
-                                                <i data-lucide="file-check" className="w-4 h-4"></i>
+                                                <SafeIcon name="file-check" className="w-4 h-4" />
                                                 <span>Ringkasan Draft Asesmen Diimpor</span>
                                             </div>
                                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 text-slate-300">
@@ -1138,7 +1434,7 @@
 
                                 <div className="glass-card p-5 rounded-2xl border border-brand-500/30 bg-brand-950/20">
                                     <div className="text-xs font-bold uppercase tracking-wider text-brand-400 mb-1 flex items-center gap-2">
-                                        <i data-lucide="book-open" className="w-4 h-4"></i>
+                                        <SafeIcon name="book-open" className="w-4 h-4" />
                                         <span>Capaian Pembelajaran (CP) Resmi BSKAP 2026</span>
                                     </div>
                                     <p className="text-sm text-slate-200 leading-relaxed font-normal mt-2">{selectedCP}</p>
@@ -1174,7 +1470,7 @@
                                 <div className="border-b border-white/10 pb-5 flex flex-wrap items-center justify-between gap-4">
                                     <div>
                                         <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-                                            <i data-lucide="table-2" className="w-6 h-6 text-brand-400"></i>
+                                            <SafeIcon name="table-2" className="w-6 h-6 text-brand-400" />
                                             <span>Tahap 2: Matriks Kisi-Kisi Soal (Exam Blueprint)</span>
                                         </h2>
                                         <p className="text-sm text-slate-400 mt-1">
@@ -1228,7 +1524,7 @@
                             <div className="glass-panel rounded-3xl p-8 space-y-8 no-print">
                                 <div className="border-b border-white/10 pb-5">
                                     <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-                                        <i data-lucide="file-text" className="w-6 h-6 text-brand-400"></i>
+                                        <SafeIcon name="file-text" className="w-6 h-6 text-brand-400" />
                                         <span>Tahap 3: Bank Soal Pilihan Ganda & Uraian HOTS</span>
                                     </h2>
                                     <p className="text-sm text-slate-400 mt-1">
@@ -1261,7 +1557,7 @@
 
                                                 <div className="mt-3 p-3 rounded-xl bg-slate-900/80 border border-white/5 text-xs text-slate-300 flex flex-col gap-1">
                                                     <div className="font-bold text-emerald-400 flex items-center gap-1.5">
-                                                        <i data-lucide="check-circle" className="w-3.5 h-3.5"></i>
+                                                        <SafeIcon name="check-circle" className="w-3.5 h-3.5" />
                                                         <span>Kunci Jawaban: {item.kunci}</span>
                                                     </div>
                                                     <p className="text-slate-400 mt-1">{item.pembahasan}</p>
@@ -1298,10 +1594,242 @@
                                     </div>
                                 </div>
 
+                                {/* === BANK SOAL & PARSER SOAL (MVP 6) === */}
+                                <div className="mt-8 pt-8 border-t-2 border-dashed border-brand-500/30 space-y-6">
+                                    <div className="border-b border-white/10 pb-5">
+                                        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
+                                            <SafeIcon name="file-text" className="w-6 h-6 text-violet-400" />
+                                            <span>Bank Soal &amp; Parser Soal</span>
+                                            <span className="ml-2 text-xs font-semibold bg-violet-500/20 text-violet-300 border border-violet-500/30 px-2 py-0.5 rounded-lg">MVP 6</span>
+                                        </h2>
+                                        <p className="text-sm text-slate-400 mt-1">
+                                            Tempel soal dari AI, dokumen manual, atau bank soal lama. Sistem akan mencoba mengubahnya menjadi format soal terstruktur untuk divalidasi dan diedit.
+                                        </p>
+                                    </div>
+
+                                    {/* RAW INPUT AREA */}
+                                    <div className="space-y-3">
+                                        <label className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                                            <SafeIcon name="clipboard" className="w-4 h-4 text-violet-400" />
+                                            <span>Tempel Teks Soal Mentah</span>
+                                        </label>
+                                        <textarea
+                                            value={rawQuestionInput}
+                                            onChange={e => setRawQuestionInput(e.target.value)}
+                                            rows={10}
+                                            placeholder={`Contoh format yang didukung:\n\n1. Perhatikan pernyataan berikut!\nSebuah benda bergerak dengan kecepatan tetap pada lintasan lurus.\nPertanyaan: Konsep gerak yang sesuai adalah ...\nA. Gerak lurus beraturan\nB. Gerak lurus berubah beraturan\nC. Gerak melingkar\nD. Gerak parabola\nKunci: A\nLevel: C2\nIndikator: Peserta didik mampu mengidentifikasi GLB.\nPembahasan: GLB terjadi ketika benda bergerak dengan kecepatan tetap.`}
+                                            className="w-full p-4 rounded-2xl outline-none leading-relaxed resize-y font-mono text-sm min-h-[200px] bg-slate-900/70 border border-violet-500/20 focus:border-violet-500 text-slate-200"
+                                        />
+                                        <div className="flex flex-wrap gap-2">
+                                            <button
+                                                onClick={handleParseQuestions}
+                                                className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-violet-600/30 transition-all"
+                                            >
+                                                <SafeIcon name="cpu" className="w-4 h-4" />
+                                                <span>Parse Soal</span>
+                                            </button>
+                                            <button
+                                                onClick={handleValidateQuestions}
+                                                disabled={!Array.isArray(parsedQuestions) || parsedQuestions.length === 0}
+                                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${(!Array.isArray(parsedQuestions) || parsedQuestions.length === 0) ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-600/20'}`}
+                                            >
+                                                <SafeIcon name="shield-check" className="w-4 h-4" />
+                                                <span>Validasi Soal</span>
+                                            </button>
+                                            <button
+                                                onClick={handleAddToBank}
+                                                disabled={!Array.isArray(parsedQuestions) || parsedQuestions.filter(q => q.validationStatus !== 'ERROR').length === 0}
+                                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${(!Array.isArray(parsedQuestions) || parsedQuestions.filter(q => q.validationStatus !== 'ERROR').length === 0) ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20'}`}
+                                            >
+                                                <SafeIcon name="plus-circle" className="w-4 h-4" />
+                                                <span>Tambah ke Bank Soal</span>
+                                            </button>
+                                            <button
+                                                onClick={handleClearParser}
+                                                className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-slate-300 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border border-white/10"
+                                            >
+                                                <SafeIcon name="trash-2" className="w-4 h-4" />
+                                                <span>Bersihkan Input</span>
+                                            </button>
+                                        </div>
+
+                                        {/* Parse / Validate Status */}
+                                        {parseStatus.message && (
+                                            <div className={`p-3 rounded-xl text-xs font-medium flex items-start gap-2.5 ${
+                                                parseStatus.type === 'error' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                                : parseStatus.type === 'warning' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                            }`}>
+                                                <SafeIcon name={parseStatus.type === 'error' ? 'alert-circle' : parseStatus.type === 'warning' ? 'alert-triangle' : 'check-circle'} className="w-4 h-4 shrink-0 mt-0.5" />
+                                                <span>{parseStatus.message}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* PARSED QUESTION REVIEW LIST */}
+                                    {Array.isArray(parsedQuestions) && parsedQuestions.length > 0 && (
+                                        <div className="space-y-3">
+                                            <h3 className="text-sm font-bold text-white flex items-center gap-2 border-l-4 border-violet-400 pl-3">
+                                                <span>Hasil Parsing ({parsedQuestions.length} soal) — Review &amp; Edit</span>
+                                            </h3>
+                                            <div className="space-y-3">
+                                                {parsedQuestions.map((q, idx) => {
+                                                    const statusColors = {
+                                                        DRAFT:   'border-slate-500/30 bg-slate-900/50',
+                                                        VALID:   'border-emerald-500/40 bg-emerald-950/30',
+                                                        WARNING: 'border-amber-500/40 bg-amber-950/30',
+                                                        ERROR:   'border-rose-500/40 bg-rose-950/30'
+                                                    };
+                                                    const badgeColors = {
+                                                        DRAFT:   'bg-slate-700 text-slate-300',
+                                                        VALID:   'bg-emerald-600/80 text-white',
+                                                        WARNING: 'bg-amber-600/80 text-white',
+                                                        ERROR:   'bg-rose-600/80 text-white'
+                                                    };
+                                                    const isEditing = editingQuestionIdx === idx;
+                                                    const safeOptions = Array.isArray(q.options) ? q.options : [];
+                                                    const validationErrors = Array.isArray(q.validationErrors) ? q.validationErrors : [];
+                                                    const validationWarnings = Array.isArray(q.validationWarnings) ? q.validationWarnings : [];
+                                                    return (
+                                                        <div key={q.id || idx} className={`rounded-2xl border p-4 space-y-3 transition-all ${statusColors[q.validationStatus || 'DRAFT'] || statusColors.DRAFT}`}>
+                                                            <div className="flex items-center justify-between flex-wrap gap-2">
+                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                    <span className="font-bold text-white text-xs bg-violet-600/70 px-2.5 py-1 rounded-lg">#{q.number}</span>
+                                                                    <span className={`text-xs font-bold px-2 py-1 rounded-lg ${badgeColors[q.validationStatus || 'DRAFT'] || badgeColors.DRAFT}`}>{q.validationStatus || 'DRAFT'}</span>
+                                                                    {q.answerKey && <span className="text-xs bg-slate-800 border border-white/10 px-2 py-1 rounded-lg text-emerald-300 font-mono">Kunci: {q.answerKey}</span>}
+                                                                    {q.cognitiveLevel && <span className="text-xs bg-slate-800 border border-white/10 px-2 py-1 rounded-lg text-brand-300">{q.cognitiveLevel}</span>}
+                                                                    <span className="text-xs text-slate-500">PG</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <button
+                                                                        onClick={() => setEditingQuestionIdx(isEditing ? null : idx)}
+                                                                        className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg transition-all border border-white/10"
+                                                                    >
+                                                                        {isEditing ? 'Tutup Edit' : 'Edit'}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleRemoveParsed(idx)}
+                                                                        className="text-xs bg-rose-900/60 hover:bg-rose-700/80 text-rose-300 px-3 py-1.5 rounded-lg transition-all border border-rose-500/20"
+                                                                    >
+                                                                        Hapus
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+
+                                                            {isEditing ? (
+                                                                <div className="space-y-2 pt-1">
+                                                                    <div>
+                                                                        <label className="text-xs text-slate-400 font-semibold block mb-1">Teks Soal</label>
+                                                                        <textarea
+                                                                            value={q.questionText}
+                                                                            onChange={e => handleEditParsedField(idx, 'questionText', e.target.value)}
+                                                                            rows={3}
+                                                                            className="w-full p-2 rounded-xl text-sm text-slate-200 bg-slate-900/80 border border-white/10 resize-y outline-none"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="grid grid-cols-2 gap-2">
+                                                                        <div>
+                                                                            <label className="text-xs text-slate-400 font-semibold block mb-1">Kunci Jawaban</label>
+                                                                            <input type="text" value={q.answerKey} onChange={e => handleEditParsedField(idx, 'answerKey', e.target.value.toUpperCase())} className="w-full p-2 rounded-xl text-sm text-emerald-300 bg-slate-900/80 border border-white/10 outline-none" placeholder="A / B / C / D" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <label className="text-xs text-slate-400 font-semibold block mb-1">Level Kognitif</label>
+                                                                            <input type="text" value={q.cognitiveLevel} onChange={e => handleEditParsedField(idx, 'cognitiveLevel', e.target.value)} className="w-full p-2 rounded-xl text-sm text-brand-300 bg-slate-900/80 border border-white/10 outline-none" placeholder="C1-C6" />
+                                                                        </div>
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="text-xs text-slate-400 font-semibold block mb-1">Indikator</label>
+                                                                        <input type="text" value={q.indicator} onChange={e => handleEditParsedField(idx, 'indicator', e.target.value)} className="w-full p-2 rounded-xl text-sm text-slate-200 bg-slate-900/80 border border-white/10 outline-none" placeholder="Indikator soal..." />
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="space-y-2">
+                                                                    {q.stimulus && <p className="text-xs text-slate-400 italic border-l-2 border-slate-600 pl-2">{q.stimulus}</p>}
+                                                                    <p className="text-sm text-slate-200 leading-relaxed">{q.questionText || <span className="text-rose-400 italic">Teks soal kosong</span>}</p>
+                                                                    <div className="grid grid-cols-2 gap-1.5">
+                                                                        {safeOptions.map((opt, oi) => opt && opt.key ? (
+                                                                            <div key={oi} className={`text-xs px-2.5 py-1.5 rounded-lg font-medium ${
+                                                                                opt.key === q.answerKey
+                                                                                    ? 'bg-emerald-900/40 border border-emerald-500/30 text-emerald-300'
+                                                                                    : 'bg-slate-800/50 border border-white/5 text-slate-300'
+                                                                            }`}>{opt.key}. {opt.text || ""}</div>
+                                                                        ) : null)}
+                                                                    </div>
+                                                                    {(validationErrors.length > 0 || validationWarnings.length > 0) && (
+                                                                        <div className="text-xs space-y-1 pt-1">
+                                                                            {validationErrors.map((e, ei) => <div key={ei} className="text-rose-400 flex items-start gap-1"><SafeIcon name="x-circle" className="w-3.5 h-3.5 mt-0.5 shrink-0" />{e}</div>)}
+                                                                            {validationWarnings.map((w, wi) => <div key={wi} className="text-amber-400 flex items-start gap-1"><SafeIcon name="alert-triangle" className="w-3.5 h-3.5 mt-0.5 shrink-0" />{w}</div>)}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* BANK SOAL DISPLAY */}
+                                    {Array.isArray(bankSoalQuestions) && bankSoalQuestions.length > 0 && (
+                                        <div className="space-y-3 pt-4 border-t border-white/10">
+                                            <h3 className="text-sm font-bold text-white flex items-center gap-2 border-l-4 border-emerald-400 pl-3">
+                                                <SafeIcon name="database" className="w-4 h-4 text-emerald-400" />
+                                                <span>Bank Soal Tervalidasi ({bankSoalQuestions.length} soal)</span>
+                                            </h3>
+                                            <div className="overflow-x-auto rounded-2xl border border-white/10">
+                                                <table className="w-full text-xs">
+                                                    <thead>
+                                                        <tr className="bg-slate-800/80 text-slate-400 font-bold text-left">
+                                                            <th className="p-3 w-12">#</th>
+                                                            <th className="p-3">Teks Soal</th>
+                                                            <th className="p-3 w-20">Kunci</th>
+                                                            <th className="p-3 w-16">Level</th>
+                                                            <th className="p-3 w-24">Status</th>
+                                                            <th className="p-3 w-16">Aksi</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-white/5">
+                                                        {bankSoalQuestions.map((q, idx) => (
+                                                            <tr key={q.id || idx} className="hover:bg-white/5 transition-colors">
+                                                                <td className="p-3 font-bold text-violet-300">{q.number}</td>
+                                                                <td className="p-3 text-slate-200 max-w-xs">
+                                                                    <div className="line-clamp-2">{q.questionText}</div>
+                                                                </td>
+                                                                <td className="p-3 font-mono font-bold text-emerald-300">{q.answerKey}</td>
+                                                                <td className="p-3">
+                                                                    <span className="bg-brand-500/20 text-brand-300 px-2 py-0.5 rounded font-semibold border border-brand-500/30">{q.cognitiveLevel || "—"}</span>
+                                                                </td>
+                                                                <td className="p-3">
+                                                                    <span className={`px-2 py-0.5 rounded font-bold ${
+                                                                        q.validationStatus === 'VALID' ? 'bg-emerald-600/80 text-white'
+                                                                        : 'bg-amber-600/80 text-white'
+                                                                    }`}>{q.validationStatus}</span>
+                                                                </td>
+                                                                <td className="p-3">
+                                                                    <button
+                                                                        onClick={() => handleRemoveFromBank(idx)}
+                                                                        className="text-rose-400 hover:text-rose-300 transition-colors"
+                                                                        title="Hapus dari bank soal"
+                                                                    >
+                                                                        <SafeIcon name="trash-2" className="w-4 h-4" />
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                {/* === END BANK SOAL & PARSER SOAL === */}
+
                                 <div className="flex justify-between pt-6 border-t border-white/10">
                                     <ButtonSecondary onClick={() => setStep(2)}>Kembali</ButtonSecondary>
                                     <ButtonPrimary onClick={() => setStep(4)} icon="arrow-right">Lanjut ke Rubrik Sikap</ButtonPrimary>
                                 </div>
+
                             </div>
                         )}
 
@@ -1310,7 +1838,7 @@
                             <div className="glass-panel rounded-3xl p-8 space-y-8 no-print">
                                 <div className="border-b border-white/10 pb-5">
                                     <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-                                        <i data-lucide="check-square" className="w-6 h-6 text-brand-400"></i>
+                                        <SafeIcon name="check-square" className="w-6 h-6 text-brand-400" />
                                         <span>Tahap 4: Rubrik Observasi Kinerja & Sikap Siswa</span>
                                     </h2>
                                     <p className="text-sm text-slate-400 mt-1">
@@ -1369,7 +1897,7 @@
                                     <div className="flex flex-wrap gap-2">
                                         <ButtonSecondary onClick={() => setStep(4)}>Sunting Kembali</ButtonSecondary>
                                         <button onClick={handleExportFinalJSON} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-indigo-600/30 transition-all">
-                                            <i data-lucide="download" className="w-4 h-4"></i>
+                                            <SafeIcon name="download" className="w-4 h-4" />
                                             <span>Export Assessment Final JSON</span>
                                         </button>
                                         <ButtonPrimary onClick={handlePrint} icon="printer">Cetak Sekarang</ButtonPrimary>
@@ -1564,11 +2092,11 @@
                         <div className="bg-[#0b111d]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex flex-col gap-2.5 shadow-[0_10px_40px_rgba(0,0,0,0.8)] hover:border-white/20 hover:-translate-y-1 transition-all duration-300">
                             <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold px-1 group-hover:text-brand-400 transition-colors">Crafted By</div>
                             <div className="flex items-center gap-3 bg-white/5 px-3 py-2.5 rounded-xl border border-white/5 cursor-default hover:bg-white/10 transition-colors">
-                                <i data-lucide="gamepad-2" className="w-4 h-4 text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]"></i>
+                                <SafeIcon name="gamepad-2" className="w-4 h-4 text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
                                 <span className="text-xs font-bold text-slate-200 tracking-wide">nazure_02</span>
                             </div>
                             <a href="https://instagram.com/purwaumbara" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-white/5 px-3 py-2.5 rounded-xl border border-white/5 hover:bg-white/10 hover:border-pink-500/50 transition-colors">
-                                <i data-lucide="instagram" className="w-4 h-4 text-pink-400 drop-shadow-[0_0_8px_rgba(244,114,182,0.8)]"></i>
+                                <SafeIcon name="instagram" className="w-4 h-4 text-pink-400 drop-shadow-[0_0_8px_rgba(244,114,182,0.8)]" />
                                 <span className="text-xs font-bold text-slate-200 tracking-wide">@purwaumbara</span>
                             </a>
                         </div>
