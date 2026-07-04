@@ -551,6 +551,176 @@
                 }
             };
 
+            // --- MVP 9: Google Form Export Blueprint Helpers ---
+            const buildGoogleFormBlueprint = () => {
+                const list = Array.isArray(bankSoalQuestions) && bankSoalQuestions.length > 0
+                    ? bankSoalQuestions
+                    : (Array.isArray(formData.soalPG) ? formData.soalPG.map(q => ({
+                        id: generateUUID(),
+                        number: q.no,
+                        questionText: q.soal,
+                        options: typeof q.opsi === 'object' && q.opsi !== null
+                            ? Object.entries(q.opsi).map(([k, v]) => ({ key: k, text: v }))
+                            : [],
+                        answerKey: q.kunci,
+                        explanation: q.pembahasan,
+                        cognitiveLevel: formData.bloom || "C4",
+                        indicator: "",
+                        reviewStatus: "Validated",
+                        score: 1
+                      })) : []);
+
+                const metaSchool = formData.sekolah || (importedDraft && importedDraft.metadata && importedDraft.metadata.school) || "";
+                const metaSubject = selectedMapel || (importedDraft && importedDraft.metadata && importedDraft.metadata.subject) || "";
+                const metaPhase = selectedFase || (importedDraft && importedDraft.metadata && importedDraft.metadata.phase) || "";
+                const metaGrade = formData.kelas ? formData.kelas.split("/")[0].trim() : ((importedDraft && importedDraft.metadata && importedDraft.metadata.grade) || "");
+                const metaSemesterRaw = formData.kelas && formData.kelas.includes("/") ? formData.kelas.split("/")[1].trim() : ((importedDraft && importedDraft.metadata && importedDraft.metadata.semester) || "Ganjil");
+                const metaSemester = (metaSemesterRaw === "Ganjil" || metaSemesterRaw === "Genap") ? metaSemesterRaw : "Ganjil";
+                const metaTopic = formData.topik || (importedDraft && importedDraft.metadata && importedDraft.metadata.topic) || "Materi";
+                const metaTeacher = formData.guru || (importedDraft && importedDraft.metadata && importedDraft.metadata.teacher) || "";
+
+                const items = list.map((q, idx) => {
+                    const optionsArray = Array.isArray(q.options) ? q.options : [];
+                    const type = optionsArray.length > 0 ? "multiple_choice" : "paragraph_text";
+                    const optionsMapped = optionsArray.map(opt => ({
+                        key: opt.key,
+                        text: opt.text || "",
+                        isCorrect: opt.key === q.answerKey
+                    }));
+
+                    return {
+                        itemId: `q-${idx + 1}`,
+                        type: type,
+                        title: q.questionText || "",
+                        helpText: q.stimulus || "",
+                        required: true,
+                        points: q.score || 1,
+                        shuffleOptions: false,
+                        options: optionsMapped,
+                        answerKey: q.answerKey || "",
+                        feedback: {
+                            correct: "Benar.",
+                            incorrect: "Pelajari kembali pembahasan soal.",
+                            explanation: q.explanation || ""
+                        },
+                        source: {
+                            questionId: q.id || "",
+                            number: q.number || idx + 1,
+                            cognitiveLevel: String(q.cognitiveLevel || "").substring(0, 2).toUpperCase() || "C3",
+                            indicator: q.indicator || "",
+                            reviewStatus: q.reviewStatus || "Validated"
+                        }
+                    };
+                });
+
+                const answerKey = items.map(item => ({
+                    number: item.source.number,
+                    questionId: item.source.questionId,
+                    answer: item.answerKey,
+                    points: item.points
+                }));
+
+                const warnings = [];
+                const blockers = [];
+
+                if (items.length === 0) {
+                    blockers.push("Tidak ada soal untuk diexport ke Google Form.");
+                }
+
+                items.forEach((item, idx) => {
+                    if (item.type === "multiple_choice" && (!item.answerKey || !item.answerKey.trim())) {
+                        blockers.push(`Soal #${idx + 1} Pilihan Ganda tidak memiliki kunci jawaban.`);
+                    }
+                    if (item.type === "multiple_choice" && item.options.length === 0) {
+                        warnings.push(`Soal #${idx + 1} Pilihan Ganda tidak memiliki opsi jawaban.`);
+                    }
+                    if (item.type === "paragraph_text") {
+                        warnings.push(`Soal #${idx + 1} adalah tipe Uraian. Tipe soal ini akan diexport sebagai Paragraph Text (belum didukung penuh oleh Google Form Blueprint otomatis).`);
+                    }
+                    if (item.source.reviewStatus !== "Locked") {
+                        warnings.push(`Soal #${idx + 1} belum dikunci (Locked) oleh Panitia.`);
+                    }
+                });
+
+                const readiness = getExportReadiness();
+                if (readiness.status !== "READY") {
+                    warnings.push("Kesiapan paket asesmen utama belum READY.");
+                }
+
+                let status = "READY";
+                if (blockers.length > 0) {
+                    status = "NOT_READY";
+                } else if (warnings.length > 0) {
+                    status = "WARNING";
+                }
+
+                return {
+                    exportType: "google_form_blueprint",
+                    schemaVersion: "0.1.0",
+                    generatedAt: new Date().toISOString(),
+                    sourceAssessmentId: importedDraft ? importedDraft.assessmentId : generateUUID(),
+                    form: {
+                        title: `Asesmen: ${metaTopic}`,
+                        description: `Asesmen Mata Pelajaran ${metaSubject} Kelas ${metaGrade} Semester ${metaSemester} - ${metaSchool}.`,
+                        isQuiz: true,
+                        collectEmail: false,
+                        shuffleQuestions: false,
+                        showProgressBar: true,
+                        confirmationMessage: "Jawaban berhasil dikirim. Terima kasih.",
+                        metadata: {
+                            school: metaSchool,
+                            subject: metaSubject,
+                            grade: metaGrade,
+                            semester: metaSemester,
+                            topic: metaTopic,
+                            teacher: metaTeacher,
+                            academicYear: "2026/2027"
+                        }
+                    },
+                    items,
+                    answerKey,
+                    validation: {
+                        status,
+                        warnings,
+                        blockers
+                    },
+                    appsScriptHandoff: {
+                        targetFunction: "createGoogleFormFromBlueprint",
+                        requiresAuthorization: true,
+                        notes: [
+                            "This file is a blueprint only. It does not create a Google Form by itself.",
+                            "Use this JSON as input for a future Google Apps Script integration."
+                        ]
+                    }
+                };
+            };
+
+            const handleExportGoogleFormBlueprint = () => {
+                const blueprint = buildGoogleFormBlueprint();
+                const slugify = (str) => (str || "untitled").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+                const dateStr = new Date().toISOString().split("T")[0];
+                const metaSubject = selectedMapel || (importedDraft && importedDraft.metadata && importedDraft.metadata.subject) || "mapel";
+                const metaTopic = formData.topik || (importedDraft && importedDraft.metadata && importedDraft.metadata.topic) || "materi";
+
+                if (blueprint.validation.status !== "READY") {
+                    const notes = [...blueprint.validation.blockers, ...blueprint.validation.warnings];
+                    const proceed = window.confirm(
+                        `Google Form Blueprint belum READY.\n\nStatus: ${blueprint.validation.status}\n\nCatatan:\n- ${notes.join("\n- ")}\n\nTetap export blueprint?`
+                    );
+                    if (!proceed) return;
+                }
+
+                const blob = new Blob([JSON.stringify(blueprint, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const downloadAnchor = document.createElement("a");
+                downloadAnchor.href = url;
+                downloadAnchor.download = `google-form-blueprint-${slugify(metaSubject)}-${slugify(metaTopic)}-${dateStr}.json`;
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                document.body.removeChild(downloadAnchor);
+                URL.revokeObjectURL(url);
+            };
+
             const [formData, setFormData] = useState({
                 sekolah: "SMP Negeri 2 Karangtengah",
                 guru: "Purwa Umbara, S.Pd.",
@@ -2280,6 +2450,10 @@
                                             <SafeIcon name="download" className="w-4 h-4" />
                                             <span>Export Assessment Final JSON</span>
                                         </button>
+                                        <button onClick={handleExportGoogleFormBlueprint} className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-violet-600/30 transition-all">
+                                            <SafeIcon name="file-json" className="w-4 h-4" />
+                                            <span>Export Google Form Blueprint JSON</span>
+                                        </button>
                                         <ButtonPrimary onClick={handlePrint} icon="printer">Cetak Sekarang</ButtonPrimary>
                                     </div>
                                 </div>
@@ -2366,6 +2540,63 @@
                                                         ))}
                                                     </div>
                                                 )}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* BLUEPRINT GOOGLE FORM PREVIEW PANEL */}
+                                {(() => {
+                                    const blueprint = buildGoogleFormBlueprint();
+                                    const totalItems = blueprint.items.length;
+                                    const MCItems = blueprint.items.filter(item => item.type === "multiple_choice");
+                                    const supportedCount = MCItems.length;
+                                    const warningCount = blueprint.validation.warnings.length;
+                                    const blockerCount = blueprint.validation.blockers.length;
+
+                                    return (
+                                        <div className="glass-panel p-6 rounded-2xl border border-white/10 no-print space-y-4">
+                                            <div className="flex items-center justify-between flex-wrap gap-4 border-b border-white/5 pb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-violet-500/20 text-violet-400 flex items-center justify-center">
+                                                        <SafeIcon name="clipboard-list" className="w-6 h-6" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-sm font-bold text-white">Blueprint Google Form</h3>
+                                                        <p className="text-xs text-slate-400 mt-0.5">Ringkasan struktur instrumen yang akan diekspor sebagai handoff Google Forms.</p>
+                                                    </div>
+                                                </div>
+                                                <span className={`text-xs uppercase px-3 py-1 rounded-xl font-bold tracking-wider ${getReadinessBadgeClass(blueprint.validation.status)}`}>
+                                                    {blueprint.validation.status}
+                                                </span>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-slate-300">
+                                                <div className="bg-slate-950/40 p-3 rounded-xl border border-white/5">
+                                                    <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Estimasi Item Form</span>
+                                                    <span className="text-md font-bold text-white block mt-1">{totalItems} Item</span>
+                                                </div>
+                                                <div className="bg-slate-950/40 p-3 rounded-xl border border-white/5">
+                                                    <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Mode Kuis (Quiz)</span>
+                                                    <span className="text-md font-bold text-emerald-400 block mt-1">AKTIF (Yes)</span>
+                                                </div>
+                                                <div className="bg-slate-950/40 p-3 rounded-xl border border-white/5">
+                                                    <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Item Didukung (MC)</span>
+                                                    <span className="text-md font-bold text-white block mt-1">{supportedCount} / {totalItems}</span>
+                                                </div>
+                                                <div className="bg-slate-950/40 p-3 rounded-xl border border-white/5">
+                                                    <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Warnings / Blockers</span>
+                                                    <span className="text-md font-bold text-white block mt-1">
+                                                        <span className={warningCount > 0 ? "text-amber-400 font-bold" : "text-slate-400"}>{warningCount} W</span>
+                                                        {" / "}
+                                                        <span className={blockerCount > 0 ? "text-rose-400 font-bold" : "text-slate-400"}>{blockerCount} B</span>
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="p-3 bg-slate-950/40 border border-white/5 rounded-xl text-xs text-slate-400 leading-relaxed flex items-start gap-2">
+                                                <SafeIcon name="info" className="w-4 h-4 mt-0.5 text-violet-400 shrink-0" />
+                                                <span>Blueprint ini belum membuat Google Form otomatis. File JSON ini disiapkan untuk integrasi Google Apps Script tahap berikutnya.</span>
                                             </div>
                                         </div>
                                     );
