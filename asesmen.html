@@ -353,23 +353,23 @@
             );
         };
 
+        const SafeIcon = ({ name, className = "w-4 h-4" }) => {
+            return <span className="inline-flex items-center justify-center shrink-0" dangerouslySetInnerHTML={{ __html: `<i data-lucide="${name}" class="${className}"></i>` }} />;
+        };
+
         const ButtonPrimary = ({ children, onClick, icon, disabled }) => (
             <button onClick={onClick} disabled={disabled} className={`flex items-center justify-center gap-2 bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-500 hover:to-brand-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg shadow-brand-600/30 hover:shadow-brand-600/50 hover:-translate-y-0.5 transition-all duration-200 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                {icon && <i data-lucide={icon} className="w-4 h-4"></i>}
+                {icon && <SafeIcon name={icon} className="w-4 h-4" />}
                 <span>{children}</span>
             </button>
         );
 
         const ButtonSecondary = ({ children, onClick, icon }) => (
             <button onClick={onClick} className="flex items-center justify-center gap-2 bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-6 rounded-xl border border-white/10 hover:border-white/20 hover:-translate-y-0.5 transition-all duration-200">
-                {icon && <i data-lucide={icon} className="w-4 h-4"></i>}
+                {icon && <SafeIcon name={icon} className="w-4 h-4" />}
                 <span>{children}</span>
             </button>
         );
-
-        const SafeIcon = ({ name, className = "w-4 h-4" }) => {
-            return <span className="inline-flex items-center justify-center shrink-0" dangerouslySetInnerHTML={{ __html: `<i data-lucide="${name}" class="${className}"></i>` }} />;
-        };
 
         // --- MAIN APPLICATION ---
         function App() {
@@ -734,7 +734,7 @@
 
             useEffect(() => {
                 if (window.lucide) window.lucide.createIcons();
-            }, [step, importStatus]);
+            });
 
             const handleInputChange = (e) => {
                 const { name, value } = e.target;
@@ -1242,8 +1242,8 @@
                     <header className="sticky top-0 z-40 glass-panel border-b border-white/10 no-print">
                         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className="bg-gradient-to-br from-brand-500 to-brand-700 p-3 rounded-2xl shadow-lg shadow-brand-500/30 flex items-center justify-center">
-                                    <i data-lucide="award" className="w-7 h-7 text-white"></i>
+                                <div className="bg-brand-600 p-3 rounded-2xl shadow-lg shadow-brand-600/30">
+                                    <SafeIcon name="award" className="w-7 h-7 text-white" />
                                 </div>
                                 <div>
                                     <h1 className="text-xl font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
@@ -1258,17 +1258,17 @@
 
                             <div className="flex items-center gap-3">
                                 <a href="index.html" className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-white/10 text-xs font-semibold transition-all shadow-md">
-                                    <i data-lucide="arrow-left" className="w-4 h-4"></i>
+                                    <SafeIcon name="arrow-left" className="w-4 h-4" />
                                     <span>Kembali ke RPP Generator</span>
                                 </a>
                                 {step === 5 && (
                                     <div className="flex items-center gap-2">
                                         <button onClick={handleExportFinalJSON} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-indigo-600/30 transition-all">
-                                            <i data-lucide="download" className="w-4 h-4"></i>
+                                            <SafeIcon name="download" className="w-4 h-4" />
                                             <span>Export Assessment Final JSON</span>
                                         </button>
                                         <button onClick={handlePrint} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-emerald-600/30 hover:scale-105 transition-all">
-                                            <i data-lucide="printer" className="w-4 h-4"></i>
+                                            <SafeIcon name="printer" className="w-4 h-4" />
                                             <span>Cetak Dokumen / PDF</span>
                                         </button>
                                     </div>
@@ -1279,7 +1279,7 @@
 
                     {/* EXPERIMENTAL PROTOTYPE BANNER */}
                     <div className="bg-amber-500/20 border-b border-amber-500/30 text-amber-300 px-6 py-2.5 text-xs font-semibold text-center no-print flex items-center justify-center gap-2">
-                        <i data-lucide="alert-triangle" className="w-4 h-4 text-amber-400 inline"></i>
+                        <SafeIcon name="alert-triangle" className="w-4 h-4 text-amber-400 inline" />
                         <span>Experimental Prototype — not yet connected to RPP JSON export or Google Form Builder.</span>
                     </div>
 
@@ -1300,7 +1300,7 @@
                                         className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${step === item.num ? 'bg-gradient-to-r from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 scale-105' : step > item.num ? 'bg-slate-800/80 text-emerald-400 border border-emerald-500/30' : 'bg-slate-900/50 text-slate-400 hover:bg-slate-800 border border-white/5'}`}
                                     >
                                         <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs ${step === item.num ? 'bg-white/20 text-white' : step > item.num ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400'}`}>
-                                            {step > item.num ? <i data-lucide="check" className="w-3.5 h-3.5"></i> : item.num}
+                                            {step > item.num ? <SafeIcon name="check" className="w-3.5 h-3.5" /> : item.num}
                                         </div>
                                         <span>{item.label}</span>
                                     </button>
@@ -1316,7 +1316,7 @@
                             <div className="glass-panel rounded-3xl p-8 space-y-8 no-print animate-fade-in">
                                 <div className="border-b border-white/10 pb-5">
                                     <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-                                        <i data-lucide="settings" className="w-6 h-6 text-brand-400"></i>
+                                        <SafeIcon name="settings" className="w-6 h-6 text-brand-400" />
                                         <span>Tahap 1: Konfigurasi Identitas & Pemetaan Kurikulum</span>
                                     </h2>
                                     <p className="text-sm text-slate-400 mt-1">
@@ -1328,7 +1328,7 @@
                                     <div className="flex items-center justify-between flex-wrap gap-3">
                                         <div>
                                             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                                                <i data-lucide="upload-cloud" className="w-5 h-5 text-brand-400"></i>
+                                                <SafeIcon name="upload-cloud" className="w-5 h-5 text-brand-400" />
                                                 <span>Import Draft Asesmen JSON</span>
                                             </h3>
                                             <p className="text-xs text-slate-400 mt-0.5">
@@ -1337,7 +1337,7 @@
                                         </div>
                                         <div>
                                             <label className="cursor-pointer bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-lg shadow-brand-600/30 flex items-center gap-2">
-                                                <i data-lucide="file-input" className="w-4 h-4"></i>
+                                                <SafeIcon name="file-input" className="w-4 h-4" />
                                                 <span>Pilih Berkas JSON...</span>
                                                 <input type="file" accept=".json,application/json" onChange={handleFileImport} className="hidden" />
                                             </label>
@@ -1345,14 +1345,14 @@
                                     </div>
                                     {importStatus.message && (
                                         <div className={`p-3 rounded-xl text-xs font-medium flex items-center gap-2.5 ${importStatus.type === 'error' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}`}>
-                                            <i data-lucide={importStatus.type === 'error' ? 'alert-circle' : 'check-circle'} className="w-4 h-4 shrink-0"></i>
+                                            <SafeIcon name={importStatus.type === 'error' ? 'alert-circle' : 'check-circle'} className="w-4 h-4 shrink-0" />
                                             <span>{importStatus.message}</span>
                                         </div>
                                     )}
                                     {importStatus.type === 'success' && importedDraft && (
                                         <div className="bg-slate-900/80 border border-emerald-500/30 rounded-2xl p-4 space-y-3 animate-fade-in text-xs">
                                             <div className="text-emerald-400 font-bold border-b border-white/10 pb-2 flex items-center gap-2">
-                                                <i data-lucide="file-check" className="w-4 h-4"></i>
+                                                <SafeIcon name="file-check" className="w-4 h-4" />
                                                 <span>Ringkasan Draft Asesmen Diimpor</span>
                                             </div>
                                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 text-slate-300">
@@ -1398,7 +1398,7 @@
 
                                 <div className="glass-card p-5 rounded-2xl border border-brand-500/30 bg-brand-950/20">
                                     <div className="text-xs font-bold uppercase tracking-wider text-brand-400 mb-1 flex items-center gap-2">
-                                        <i data-lucide="book-open" className="w-4 h-4"></i>
+                                        <SafeIcon name="book-open" className="w-4 h-4" />
                                         <span>Capaian Pembelajaran (CP) Resmi BSKAP 2026</span>
                                     </div>
                                     <p className="text-sm text-slate-200 leading-relaxed font-normal mt-2">{selectedCP}</p>
@@ -1434,7 +1434,7 @@
                                 <div className="border-b border-white/10 pb-5 flex flex-wrap items-center justify-between gap-4">
                                     <div>
                                         <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-                                            <i data-lucide="table-2" className="w-6 h-6 text-brand-400"></i>
+                                            <SafeIcon name="table-2" className="w-6 h-6 text-brand-400" />
                                             <span>Tahap 2: Matriks Kisi-Kisi Soal (Exam Blueprint)</span>
                                         </h2>
                                         <p className="text-sm text-slate-400 mt-1">
@@ -1488,7 +1488,7 @@
                             <div className="glass-panel rounded-3xl p-8 space-y-8 no-print">
                                 <div className="border-b border-white/10 pb-5">
                                     <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-                                        <i data-lucide="file-text" className="w-6 h-6 text-brand-400"></i>
+                                        <SafeIcon name="file-text" className="w-6 h-6 text-brand-400" />
                                         <span>Tahap 3: Bank Soal Pilihan Ganda & Uraian HOTS</span>
                                     </h2>
                                     <p className="text-sm text-slate-400 mt-1">
@@ -1521,7 +1521,7 @@
 
                                                 <div className="mt-3 p-3 rounded-xl bg-slate-900/80 border border-white/5 text-xs text-slate-300 flex flex-col gap-1">
                                                     <div className="font-bold text-emerald-400 flex items-center gap-1.5">
-                                                        <i data-lucide="check-circle" className="w-3.5 h-3.5"></i>
+                                                        <SafeIcon name="check-circle" className="w-3.5 h-3.5" />
                                                         <span>Kunci Jawaban: {item.kunci}</span>
                                                     </div>
                                                     <p className="text-slate-400 mt-1">{item.pembahasan}</p>
@@ -1802,7 +1802,7 @@
                             <div className="glass-panel rounded-3xl p-8 space-y-8 no-print">
                                 <div className="border-b border-white/10 pb-5">
                                     <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-                                        <i data-lucide="check-square" className="w-6 h-6 text-brand-400"></i>
+                                        <SafeIcon name="check-square" className="w-6 h-6 text-brand-400" />
                                         <span>Tahap 4: Rubrik Observasi Kinerja & Sikap Siswa</span>
                                     </h2>
                                     <p className="text-sm text-slate-400 mt-1">
@@ -1861,7 +1861,7 @@
                                     <div className="flex flex-wrap gap-2">
                                         <ButtonSecondary onClick={() => setStep(4)}>Sunting Kembali</ButtonSecondary>
                                         <button onClick={handleExportFinalJSON} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-indigo-600/30 transition-all">
-                                            <i data-lucide="download" className="w-4 h-4"></i>
+                                            <SafeIcon name="download" className="w-4 h-4" />
                                             <span>Export Assessment Final JSON</span>
                                         </button>
                                         <ButtonPrimary onClick={handlePrint} icon="printer">Cetak Sekarang</ButtonPrimary>
@@ -2056,11 +2056,11 @@
                         <div className="bg-[#0b111d]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex flex-col gap-2.5 shadow-[0_10px_40px_rgba(0,0,0,0.8)] hover:border-white/20 hover:-translate-y-1 transition-all duration-300">
                             <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold px-1 group-hover:text-brand-400 transition-colors">Crafted By</div>
                             <div className="flex items-center gap-3 bg-white/5 px-3 py-2.5 rounded-xl border border-white/5 cursor-default hover:bg-white/10 transition-colors">
-                                <i data-lucide="gamepad-2" className="w-4 h-4 text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]"></i>
+                                <SafeIcon name="gamepad-2" className="w-4 h-4 text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
                                 <span className="text-xs font-bold text-slate-200 tracking-wide">nazure_02</span>
                             </div>
                             <a href="https://instagram.com/purwaumbara" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-white/5 px-3 py-2.5 rounded-xl border border-white/5 hover:bg-white/10 hover:border-pink-500/50 transition-colors">
-                                <i data-lucide="instagram" className="w-4 h-4 text-pink-400 drop-shadow-[0_0_8px_rgba(244,114,182,0.8)]"></i>
+                                <SafeIcon name="instagram" className="w-4 h-4 text-pink-400 drop-shadow-[0_0_8px_rgba(244,114,182,0.8)]" />
                                 <span className="text-xs font-bold text-slate-200 tracking-wide">@purwaumbara</span>
                             </a>
                         </div>
