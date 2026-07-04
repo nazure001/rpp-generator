@@ -606,7 +606,7 @@
                         optionsMapped = normalized.options.map(opt => ({
                             key: opt.key,
                             text: opt.text || "",
-                            isCorrect: normalized.type === "multiple_select"
+                            isCorrect: (normalized.type === "multiple_select" || normalized.type === "checkbox")
                                 ? (normalized.answerKeys || []).includes(opt.key)
                                 : opt.key === normalized.answerKey
                         }));
@@ -636,6 +636,7 @@
                         source: {
                             questionId: normalized.questionId || "",
                             number: normalized.number || idx + 1,
+                            originalType: q.type || "",
                             cognitiveLevel: normalized.cognitiveLevel || "C3",
                             indicator: normalized.indicator || "",
                             reviewStatus: normalized.reviewStatus || "Validated",
@@ -662,7 +663,7 @@
                 items.forEach((item, idx) => {
                     const mapping = item.source.googleFormMapping;
                     if (!mapping.supported) {
-                        warnings.push(`Soal #${idx + 1}: Tipe soal ${item.type} belum didukung penuh oleh Google Form Blueprint.`);
+                        warnings.push(`Soal #${idx + 1}: Tipe soal ${item.source.originalType || item.type} belum didukung penuh oleh Google Form Blueprint.`);
                     }
                     if (item.type === "multiple_choice" && (!item.answerKey || !item.answerKey.trim())) {
                         blockers.push(`Soal #${idx + 1} Pilihan Ganda tidak memiliki kunci jawaban.`);
@@ -775,21 +776,39 @@
             };
 
             const normalizeQuestionForAdvancedSchema = (q, idx = 0) => {
-                if (!q) return null;
+                q = q || {};
                 const normalizedType = normalizeAdvancedQuestionType(q.type);
                 
-                // Map difficulty target
+                // Map difficulty target — only fall back to legacy difficulty if difficultyTarget is not set
                 let diffTarget = q.difficultyTarget || "Medium";
-                if (q.difficulty === "Mudah" || q.difficulty === "Easy") diffTarget = "Easy";
-                if (q.difficulty === "Sedang" || q.difficulty === "Medium") diffTarget = "Medium";
-                if (q.difficulty === "Sukar" || q.difficulty === "Hard") diffTarget = "Hard";
+                if (!q.difficultyTarget) {
+                    if (q.difficulty === "Mudah" || q.difficulty === "Easy") diffTarget = "Easy";
+                    if (q.difficulty === "Sedang" || q.difficulty === "Medium") diffTarget = "Medium";
+                    if (q.difficulty === "Sukar" || q.difficulty === "Hard") diffTarget = "Hard";
+                }
 
-                // Options mapping
+                // Options mapping — normalize string arrays to {key, text} objects
                 let options = q.options || [];
+                if (Array.isArray(options)) {
+                    options = options.map(opt => {
+                        if (typeof opt === 'string') {
+                            const match = opt.match(/^([A-E])[\.\)]\s*(.*)/i);
+                            return match ? { key: match[1].toUpperCase(), text: match[2].trim() } : { key: "", text: opt };
+                        } else if (opt && typeof opt === 'object') {
+                            if (!opt.key && opt.text) {
+                                const match = String(opt.text).match(/^([A-E])[\.\)]\s*(.*)/i);
+                                if (match) {
+                                    return { key: match[1].toUpperCase(), text: match[2].trim(), isCorrect: opt.isCorrect };
+                                }
+                            }
+                        }
+                        return opt;
+                    });
+                }
 
                 // Answer keys mapping
                 let answerKeys = q.answerKeys || [];
-                if (normalizedType === "multiple_select" && answerKeys.length === 0 && q.answerKey) {
+                if ((normalizedType === "multiple_select" || normalizedType === "checkbox") && answerKeys.length === 0 && q.answerKey) {
                     answerKeys = [q.answerKey];
                 }
 
@@ -1723,7 +1742,7 @@
                             return {
                                 ...normalized,
                                 type: "Pilihan Ganda",
-                                options: q.opsi,
+                                options: normalized.options,
                                 correctAnswer: normalized.answerKey || "",
                                 validationStatus: "Valid"
                             };
