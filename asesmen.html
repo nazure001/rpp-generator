@@ -3657,47 +3657,53 @@
                                                                     Status Konfigurasi: {pkgValidation.status}
                                                                 </span>
                                                             </div>
-                                                    );
-                                                })()}
-                                                    {pkgValidation.blockers.length > 0 && (
-                                                        <div className="space-y-1">
-                                                            <div className="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Blocker</div>
-                                                            {pkgValidation.blockers.map((b,i) => (
-                                                                <div key={i} className="flex items-start gap-1.5 text-xs text-rose-300">
-                                                                    <SafeIcon name="x" className="w-3 h-3 shrink-0 mt-0.5 text-rose-400" />
-                                                                    {b}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                    {pkgValidation.warnings.length > 0 && (
-                                                        <div className="space-y-1">
-                                                            <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Peringatan</div>
-                                                            {pkgValidation.warnings.map((w,i) => (
-                                                                <div key={i} className="flex items-start gap-1.5 text-xs text-amber-300">
-                                                                    <SafeIcon name="alert-circle" className="w-3 h-3 shrink-0 mt-0.5 text-amber-400" />
-                                                                    {w}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                    {/* Distribution Summary */}
-                                                    {blueprintRows.length > 0 && (
-                                                        <div className="grid grid-cols-3 gap-3 pt-2 border-t border-white/10">
-                                                            {[{label:"Jenis Soal",dist:pkgSummary.questionTypeDistribution},{label:"Level Kognitif",dist:pkgSummary.cognitiveLevelDistribution},{label:"Kesulitan",dist:pkgSummary.difficultyDistribution}].map(({label,dist}) => (
-                                                                <div key={label}>
-                                                                    <div className="text-[9px] text-slate-400 uppercase tracking-wider font-bold mb-1">{label}</div>
-                                                                    {Object.entries(dist).map(([k,v]) => (
-                                                                        <div key={k} className="flex justify-between text-[10px]">
-                                                                            <span className="text-slate-300">{k}</span>
-                                                                            <span className="text-white font-bold">{v}</span>
+
+                                                            {pkgValidation.blockers.length > 0 && (
+                                                                <div className="space-y-1">
+                                                                    <div className="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Blocker</div>
+                                                                    {pkgValidation.blockers.map((b, i) => (
+                                                                        <div key={i} className="flex items-start gap-1.5 text-xs text-rose-300">
+                                                                            <SafeIcon name="x" className="w-3 h-3 shrink-0 mt-0.5 text-rose-400" />
+                                                                            {b}
                                                                         </div>
                                                                     ))}
                                                                 </div>
-                                                            ))}
+                                                            )}
+
+                                                            {pkgValidation.warnings.length > 0 && (
+                                                                <div className="space-y-1">
+                                                                    <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Peringatan</div>
+                                                                    {pkgValidation.warnings.map((w, i) => (
+                                                                        <div key={i} className="flex items-start gap-1.5 text-xs text-amber-300">
+                                                                            <SafeIcon name="alert-circle" className="w-3 h-3 shrink-0 mt-0.5 text-amber-400" />
+                                                                            {w}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+
+                                                            {blueprintRows.length > 0 && (
+                                                                <div className="grid grid-cols-3 gap-3 pt-2 border-t border-white/10">
+                                                                    {[
+                                                                        { label: "Jenis Soal", dist: pkgSummary.questionTypeDistribution },
+                                                                        { label: "Level Kognitif", dist: pkgSummary.cognitiveLevelDistribution },
+                                                                        { label: "Kesulitan", dist: pkgSummary.difficultyDistribution }
+                                                                    ].map(({ label, dist }) => (
+                                                                        <div key={label}>
+                                                                            <div className="text-[9px] text-slate-400 uppercase tracking-wider font-bold mb-1">{label}</div>
+                                                                            {Object.entries(dist).map(([k, v]) => (
+                                                                                <div key={k} className="flex justify-between text-[10px]">
+                                                                                    <span className="text-slate-300">{k}</span>
+                                                                                    <span className="text-white font-bold">{v}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    )}
-                                                </div>
+                                                    );
+                                                })()}
 
                                                 {/* D. EXPORT BUTTON */}
                                                 <div className="flex items-center justify-between flex-wrap gap-3 pt-2">
