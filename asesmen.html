@@ -474,9 +474,6 @@
                             // Fix #4: for exact duplicate, only the LATER item is flagged;
                             // the first occurrence (lower index) stays UNIQUE.
                             if (score === 1.0 && i > idx) {
-                        const score = calculateSimilarity(q.questionText, other.questionText);
-                        if (score > maxScore) {
-                            if (score === 1.0 && i > idx) {
                                 continue;
                             }
                             maxScore = score;
