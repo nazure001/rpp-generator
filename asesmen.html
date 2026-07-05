@@ -629,18 +629,14 @@
                         statements: normalized.statements || [],
                         pairs: normalized.pairs || [],
                         feedback: {
-                            correct: "Benar.",
-                            incorrect: "Pelajari kembali pembahasan soal.",
-                            explanation: normalized.explanation || ""
-                        },
                         source: {
                             questionId: normalized.questionId || "",
                             number: normalized.number || idx + 1,
-                            originalType: normalized.type,
                             cognitiveLevel: normalized.cognitiveLevel || "C3",
                             indicator: normalized.indicator || "",
                             reviewStatus: normalized.reviewStatus || "Validated",
-                            googleFormMapping: mapping
+                            googleFormMapping: mapping,
+                            originalType: normalized.type
                         }
                     };
                 });
