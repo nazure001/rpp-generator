@@ -408,6 +408,30 @@
             const [filterCognitiveLevel, setFilterCognitiveLevel] = useState("all");
             const [filterDuplicateCheck, setFilterDuplicateCheck] = useState("all");
 
+            // --- MVP 12: Assessment Package Configuration State ---
+            const [assessmentPackageConfig, setAssessmentPackageConfig] = useState({
+                assessmentType: "SAS",
+                packageTitle: "",
+                schoolYear: "2026/2027",
+                semester: "",
+                subject: "",
+                phase: "",
+                grade: "",
+                durationMinutes: 90,
+                totalQuestions: 40,
+                targetScore: 100,
+                passingGrade: 75,
+                randomizationMode: "manual",
+                shuffleQuestions: true,
+                shuffleOptions: true,
+                generateParallelPackages: false,
+                parallelPackageCount: 1,
+                notes: ""
+            });
+            const [blueprintRows, setBlueprintRows] = useState([]);
+            const [packageValidation, setPackageValidation] = useState(null);
+            const [showPackageConfig, setShowPackageConfig] = useState(false);
+
             const calculateSimilarity = (str1, str2) => {
                 const getTokens = (str) => {
                     return new Set(
@@ -449,9 +473,6 @@
                         if (score > maxScore) {
                             // Fix #4: for exact duplicate, only the LATER item is flagged;
                             // the first occurrence (lower index) stays UNIQUE.
-                            if (score === 1.0 && i > idx) {
-                        const score = calculateSimilarity(q.questionText, other.questionText);
-                        if (score > maxScore) {
                             if (score === 1.0 && i > idx) {
                                 continue;
                             }
@@ -1266,6 +1287,220 @@
                 const status = errors.length > 0 ? "ERROR" : (warnings.length > 0 ? "WARNING" : "VALID");
                 return { ...q, validationStatus: status, validationErrors: errors, validationWarnings: warnings };
             };
+
+            // --- MVP 12: Assessment Package Configuration Helpers ---
+            const createEmptyBlueprintRow = () => ({
+                id: generateUUID(),
+                topic: "",
+                learningObjective: "",
+                indicator: "",
+                material: "",
+                questionType: "multiple_choice",
+                cognitiveLevel: "C3",
+                difficultyTarget: "Medium",
+                questionCount: 1,
+                weightPercent: 0,
+                requiredLockedOnly: true,
+                notes: ""
+            });
+
+            const calculateBlueprintSummary = (rows, config) => {
+                const totalAllocated = rows.reduce((s, r) => s + (parseInt(r.questionCount) || 0), 0);
+                const totalWeight = rows.reduce((s, r) => s + (parseFloat(r.weightPercent) || 0), 0);
+                const qtDist = {};
+                const clDist = {};
+                const diffDist = {};
+                rows.forEach(r => {
+                    qtDist[r.questionType] = (qtDist[r.questionType] || 0) + (parseInt(r.questionCount) || 0);
+                    clDist[r.cognitiveLevel] = (clDist[r.cognitiveLevel] || 0) + (parseInt(r.questionCount) || 0);
+                    diffDist[r.difficultyTarget] = (diffDist[r.difficultyTarget] || 0) + (parseInt(r.questionCount) || 0);
+                });
+                const higherOrder = ["C4","C5","C6"];
+                const hasHOTS = rows.some(r => higherOrder.includes(r.cognitiveLevel));
+                const isSummative = ["SAS","PAS","PTS","PAT","Summative"].includes(config.assessmentType);
+                return {
+                    totalAllocatedQuestions: totalAllocated,
+                    totalWeightPercent: Math.round(totalWeight * 100) / 100,
+                    isQuestionCountValid: totalAllocated === (parseInt(config.totalQuestions) || 0),
+                    isWeightValid: Math.abs(totalWeight - 100) < 0.5,
+                    questionTypeDistribution: qtDist,
+                    cognitiveLevelDistribution: clDist,
+                    difficultyDistribution: diffDist,
+                    topicCount: new Set(rows.map(r => (r.topic || r.material || "").toLowerCase().trim()).filter(Boolean)).size,
+                    indicatorCount: new Set(rows.map(r => (r.indicator || r.learningObjective || "").toLowerCase().trim()).filter(Boolean)).size,
+                    hasHOTS,
+                    isSummativeWithoutHOTS: isSummative && !hasHOTS,
+                    singleTypeDominant: Object.keys(qtDist).length <= 1 && rows.length > 1,
+                    singleLevelDominant: Object.keys(clDist).length <= 1 && rows.length > 1
+                };
+            };
+
+            const getBlueprintRowCoverage = (row, bankSoalQuestions) => {
+                const active = (Array.isArray(bankSoalQuestions) ? bankSoalQuestions : []).filter(q =>
+                    q.bankStatus !== "archived" && q.bankStatus !== "rejected_duplicate"
+                );
+                const matchTopic = (q) => {
+                    const target = (row.topic || row.material || "").toLowerCase().trim();
+                    if (!target) return true;
+                    const qTopic = ((q.topic || q.material || q.chapter || "") + " " + (q.questionText || "")).toLowerCase();
+                    return qTopic.includes(target);
+                };
+                const matchType = (q) => row.questionType === "any" || !row.questionType ||
+                    normalizeAdvancedQuestionType(q.questionType || q.type || "") === normalizeAdvancedQuestionType(row.questionType);
+                const matchLevel = (q) => row.cognitiveLevel === "any" || !row.cognitiveLevel ||
+                    (q.cognitiveLevel || "").toUpperCase().startsWith(row.cognitiveLevel.toUpperCase());
+                const matchDiff = (q) => {
+                    if (row.difficultyTarget === "any" || !row.difficultyTarget) return true;
+                    const qDiff = q.difficultyTarget || q.difficulty || q.difficultyLevel || "Medium";
+                    return qDiff.toLowerCase() === row.difficultyTarget.toLowerCase();
+                };
+                const matched = active.filter(q => matchTopic(q) && matchType(q) && matchLevel(q) && matchDiff(q));
+                const lockedMatched = matched.filter(q => q.reviewStatus === "Locked");
+                const required = parseInt(row.questionCount) || 0;
+                const available = matched.length;
+                const lockedAvailable = lockedMatched.length;
+                const effectiveAvailable = row.requiredLockedOnly ? lockedAvailable : available;
+                let status = effectiveAvailable >= required ? "ENOUGH" : effectiveAvailable > 0 ? "LOW" : "EMPTY";
+                if (required === 0) status = "ENOUGH";
+                return {
+                    rowId: row.id,
+                    requiredCount: required,
+                    availableCount: available,
+                    lockedAvailableCount: lockedAvailable,
+                    effectiveAvailable,
+                    status,
+                    message: status === "ENOUGH" ? `Tersedia ${effectiveAvailable} soal.` :
+                              status === "LOW" ? `Hanya ${effectiveAvailable} soal tersedia, butuh ${required}.` :
+                              "Tidak ada soal yang cocok di Bank Soal."
+                };
+            };
+
+            const validateAssessmentPackageConfig = (config, rows, bankQuestions) => {
+                const blockers = [];
+                const warnings = [];
+                const coverage = rows.map(r => getBlueprintRowCoverage(r, bankQuestions));
+                const summary = calculateBlueprintSummary(rows, config);
+                const totalQ = parseInt(config.totalQuestions) || 0;
+
+                if (!config.packageTitle || !config.packageTitle.trim()) blockers.push("Judul paket asesmen belum diisi.");
+                if (!config.assessmentType) blockers.push("Jenis asesmen belum dipilih.");
+                if (rows.length === 0) blockers.push("Blueprint belum memiliki baris (topik/indikator). Tambahkan minimal satu baris.");
+                if (totalQ <= 0) blockers.push("Total soal harus lebih dari 0.");
+                if (rows.length > 0 && !summary.isQuestionCountValid) {
+                    blockers.push(`Total soal dialokasikan (${summary.totalAllocatedQuestions}) tidak sama dengan target (${totalQ}).`);
+                }
+                if (rows.length > 0 && !summary.isWeightValid) {
+                    blockers.push(`Total bobot (${summary.totalWeightPercent}%) harus mendekati 100%.`);
+                }
+
+                if (!config.subject || !config.subject.trim()) warnings.push("Mata pelajaran belum diisi.");
+                if (!config.grade || !config.grade.trim()) warnings.push("Kelas/Grade belum diisi.");
+                if (!config.semester || !config.semester.trim()) warnings.push("Semester belum diisi.");
+                const activeBank = (Array.isArray(bankQuestions) ? bankQuestions : []).filter(
+                    q => q.bankStatus !== "archived" && q.bankStatus !== "rejected_duplicate"
+                );
+                if (activeBank.length === 0) warnings.push("Bank Soal tidak memiliki soal aktif. Tambahkan soal sebelum finalisasi.");
+                rows.forEach((r, i) => {
+                    if (!r.topic && !r.material) warnings.push(`Baris ${i+1}: Topik/materi belum diisi.`);
+                    if (!r.indicator && !r.learningObjective) warnings.push(`Baris ${i+1}: Indikator/TP belum diisi.`);
+                });
+                if (summary.isSummativeWithoutHOTS) warnings.push("Asesmen sumatif sebaiknya mencakup soal HOTS (C4-C6).");
+                if (summary.singleTypeDominant) warnings.push("Semua baris menggunakan satu jenis soal. Pertimbangkan variasi.");
+                if (summary.singleLevelDominant) warnings.push("Semua baris menggunakan satu level kognitif. Pertimbangkan variasi.");
+                coverage.forEach((cov, i) => {
+                    if (cov.status === "EMPTY") warnings.push(`Baris ${i+1}: Tidak ada soal yang cocok di Bank Soal.`);
+                    else if (cov.status === "LOW") warnings.push(`Baris ${i+1}: Soal tersedia (${cov.effectiveAvailable}) kurang dari kebutuhan (${cov.requiredCount}).`);
+                });
+
+                const status = blockers.length > 0 ? "NOT_READY" : warnings.length > 0 ? "WARNING" : "READY";
+                return { status, blockers, warnings, coverage, summary };
+            };
+
+            const handleAddBlueprintRow = () => {
+                setBlueprintRows(prev => [...prev, createEmptyBlueprintRow()]);
+            };
+
+            const handleUpdateBlueprintRow = (rowId, field, value) => {
+                setBlueprintRows(prev => prev.map(r => r.id === rowId ? { ...r, [field]: value } : r));
+            };
+
+            const handleRemoveBlueprintRow = (rowId) => {
+                setBlueprintRows(prev => prev.filter(r => r.id !== rowId));
+            };
+
+            const handleAutoBalanceWeights = () => {
+                setBlueprintRows(prev => {
+                    const totalQ = prev.reduce((s, r) => s + (parseInt(r.questionCount) || 0), 0);
+                    if (totalQ === 0) return prev;
+                    let remaining = 100;
+                    return prev.map((r, i) => {
+                        const q = parseInt(r.questionCount) || 0;
+                        if (i === prev.length - 1) {
+                            return { ...r, weightPercent: Math.round(remaining * 100) / 100 };
+                        }
+                        const w = Math.round((q / totalQ * 100) * 100) / 100;
+                        remaining -= w;
+                        return { ...r, weightPercent: w };
+                    });
+                });
+            };
+
+            const handleExportAssessmentPackageConfig = () => {
+                const summary = calculateBlueprintSummary(blueprintRows, assessmentPackageConfig);
+                const validation = validateAssessmentPackageConfig(assessmentPackageConfig, blueprintRows, bankSoalQuestions);
+                const active = (Array.isArray(bankSoalQuestions) ? bankSoalQuestions : []);
+                const payload = {
+                    exportType: "assessment_package_configuration",
+                    schemaVersion: "0.1.0",
+                    generatedAt: new Date().toISOString(),
+                    packageConfig: assessmentPackageConfig,
+                    blueprintRows,
+                    blueprintSummary: summary,
+                    validation,
+                    bankCoverageSnapshot: {
+                        totalBankQuestions: active.length,
+                        activeQuestions: active.filter(q => q.bankStatus !== "archived" && q.bankStatus !== "rejected_duplicate").length,
+                        lockedQuestions: active.filter(q => q.reviewStatus === "Locked").length,
+                        archivedQuestions: active.filter(q => q.bankStatus === "archived").length,
+                        rejectedDuplicateQuestions: active.filter(q => q.bankStatus === "rejected_duplicate").length
+                    },
+                    nextStep: {
+                        recommendedMvp: "MVP 13 Controlled Random Builder",
+                        note: "This configuration is a blueprint only. Automatic question selection is intentionally not executed in MVP 12."
+                    }
+                };
+                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                const slug = (s) => (s || "unknown").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+                a.download = `assessment-package-config-${slug(assessmentPackageConfig.assessmentType)}-${slug(assessmentPackageConfig.subject)}-${new Date().toISOString().slice(0,10)}.json`;
+                a.href = url;
+                a.click();
+            };
+
+            const pkgSummary = React.useMemo(
+                () => calculateBlueprintSummary(blueprintRows, assessmentPackageConfig),
+                [blueprintRows, assessmentPackageConfig]
+            );
+
+            const pkgValidation = React.useMemo(
+                () => validateAssessmentPackageConfig(assessmentPackageConfig, blueprintRows, bankSoalQuestions),
+                [assessmentPackageConfig, blueprintRows, bankSoalQuestions]
+            );
+
+            React.useEffect(() => {
+                if (showPackageConfig) {
+                    setAssessmentPackageConfig(prev => ({
+                        ...prev,
+                        subject: prev.subject || selectedMapel || "",
+                        phase: prev.phase || selectedFase || "",
+                        grade: prev.grade || formData.kelas || "",
+                        semester: prev.semester || formData.semester || "",
+                        packageTitle: prev.packageTitle || (formData.topik ? "Paket Asesmen " + formData.topik : "")
+                    }));
+                }
+            }, [showPackageConfig, selectedMapel, selectedFase, formData.kelas, formData.semester, formData.topik]);
+
 
             // --- MVP 6: Parser Event Handlers ---
             const handleParseQuestions = () => {
@@ -3156,6 +3391,339 @@
                                     )}
                                 </div>
                                 {/* === END BANK SOAL & PARSER SOAL === */}
+
+                                {/* === MVP 12: KONFIGURASI PAKET ASESMEN === */}
+                                <div className="mt-6 bg-slate-900/60 border border-violet-500/30 rounded-2xl overflow-hidden">
+                                    <button
+                                        onClick={() => setShowPackageConfig(p => !p)}
+                                        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-white/5 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center">
+                                                <SafeIcon name="layout" className="w-4 h-4 text-violet-400" />
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-bold text-white flex items-center gap-2">
+                                                    <span>Konfigurasi Paket Asesmen</span>
+                                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-violet-500/20 text-violet-300 border border-violet-500/30">MVP 12</span>
+                                                </div>
+                                                <div className="text-xs text-slate-400 mt-0.5">Atur struktur SAS/PAS/PTS/UH multi-topik sebelum soal dipilih atau diacak dari Bank Soal.</div>
+                                            </div>
+                                        </div>
+                                        <SafeIcon name={showPackageConfig ? "chevron-up" : "chevron-down"} className="w-5 h-5 text-slate-400" />
+                                    </button>
+
+                                    {showPackageConfig && (() => {
+                                        return (
+                                            <div className="px-5 pb-5 space-y-5 border-t border-white/10">
+
+                                                {/* INFO BANNER */}
+                                                <div className="mt-4 p-3 bg-violet-500/10 border border-violet-500/20 rounded-xl text-xs text-violet-300 flex items-start gap-2">
+                                                    <SafeIcon name="info" className="w-4 h-4 shrink-0 mt-0.5" />
+                                                    <span>MVP 12 adalah konfigurasi blueprint saja. Pemilihan soal otomatis akan dilakukan di MVP 13 Controlled Random Builder.</span>
+                                                </div>
+
+                                                {/* A. PACKAGE IDENTITY FORM */}
+                                                <div className="bg-white/5 rounded-xl p-4 space-y-4">
+                                                    <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                                                        <SafeIcon name="file-text" className="w-4 h-4 text-violet-400" />
+                                                        Identitas Paket Asesmen
+                                                    </h4>
+                                                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                                                        {[  
+                                                            { key: "assessmentType", label: "Jenis Asesmen", type: "select", opts: ["Diagnostic","Formative","Summative","UH","PTS","PAS","SAS","PAT","Tryout","Custom"] },
+                                                            { key: "packageTitle", label: "Judul Paket", type: "text", placeholder: "mis. SAS Genap 2026" },
+                                                            { key: "subject", label: "Mata Pelajaran", type: "text", placeholder: "mis. Matematika" },
+                                                            { key: "grade", label: "Kelas", type: "text", placeholder: "mis. X" },
+                                                            { key: "phase", label: "Fase", type: "text", placeholder: "mis. E" },
+                                                            { key: "semester", label: "Semester", type: "select", opts: ["","Ganjil","Genap"] },
+                                                            { key: "schoolYear", label: "Tahun Pelajaran", type: "text", placeholder: "2026/2027" },
+                                                            { key: "durationMinutes", label: "Durasi (menit)", type: "number" },
+                                                            { key: "totalQuestions", label: "Total Soal Target", type: "number" },
+                                                            { key: "passingGrade", label: "KKM / Passing Grade", type: "number" },
+                                                            { key: "randomizationMode", label: "Mode Randomisasi", type: "select", opts: ["manual","controlled_random","semi_random","parallel_package"] },
+                                                            { key: "parallelPackageCount", label: "Paket Paralel", type: "number" }
+                                                        ].map(field => (
+                                                            <div key={field.key}>
+                                                                <label className="block text-[10px] text-slate-400 mb-1 font-semibold uppercase tracking-wide">{field.label}</label>
+                                                                {field.type === "select" ? (
+                                                                    <select
+                                                                        value={assessmentPackageConfig[field.key] || ""}
+                                                                        onChange={e => setAssessmentPackageConfig(p => ({ ...p, [field.key]: e.target.value }))}
+                                                                        className="w-full bg-slate-800 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500/50"
+                                                                    >
+                                                                        {field.opts.map(o => <option key={o} value={o}>{o || "— Pilih —"}</option>)}
+                                                                    </select>
+                                                                ) : (
+                                                                    <input
+                                                                        type={field.type}
+                                                                        value={assessmentPackageConfig[field.key] ?? ""}
+                                                                        placeholder={field.placeholder || ""}
+                                                                        onChange={e => setAssessmentPackageConfig(p => ({ ...p, [field.key]: field.type === "number" ? Number(e.target.value) : e.target.value }))}
+                                                                        className="w-full bg-slate-800 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500/50"
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-3">
+                                                        {[
+                                                            { key: "shuffleQuestions", label: "Acak Urutan Soal" },
+                                                            { key: "shuffleOptions", label: "Acak Opsi Jawaban" },
+                                                            { key: "generateParallelPackages", label: "Buat Paket Paralel" }
+                                                        ].map(cb => (
+                                                            <label key={cb.key} className="flex items-center gap-2 cursor-pointer bg-slate-800/60 rounded-lg px-3 py-2">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={!!assessmentPackageConfig[cb.key]}
+                                                                    onChange={e => setAssessmentPackageConfig(p => ({ ...p, [cb.key]: e.target.checked }))}
+                                                                    className="accent-violet-500"
+                                                                />
+                                                                <span className="text-xs text-slate-300">{cb.label}</span>
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] text-slate-400 mb-1 font-semibold uppercase tracking-wide">Catatan Tambahan</label>
+                                                        <textarea
+                                                            value={assessmentPackageConfig.notes}
+                                                            onChange={e => setAssessmentPackageConfig(p => ({ ...p, notes: e.target.value }))}
+                                                            placeholder="Instruksi khusus, catatan penyusun, dll."
+                                                            rows={2}
+                                                            className="w-full bg-slate-800 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500/50 resize-none"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* B. BLUEPRINT MATRIX TABLE */}
+                                                <div className="bg-white/5 rounded-xl p-4 space-y-3">
+                                                    <div className="flex items-center justify-between flex-wrap gap-2">
+                                                        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                                                            <SafeIcon name="table-2" className="w-4 h-4 text-violet-400" />
+                                                            Matriks Blueprint
+                                                            <span className="text-slate-500 font-normal normal-case">({blueprintRows.length} baris)</span>
+                                                        </h4>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={handleAutoBalanceWeights}
+                                                                className="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors"
+                                                            >
+                                                                <SafeIcon name="sliders" className="w-3 h-3" />
+                                                                Auto Balance Bobot
+                                                            </button>
+                                                            <button
+                                                                onClick={handleAddBlueprintRow}
+                                                                className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors"
+                                                            >
+                                                                <SafeIcon name="plus" className="w-3 h-3" />
+                                                                Tambah Baris
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {blueprintRows.length === 0 ? (
+                                                        <div className="text-center py-8 text-slate-500 text-xs">
+                                                            <SafeIcon name="table" className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                                                            <p>Belum ada baris blueprint. Klik <strong>Tambah Baris</strong> untuk mulai.</p>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="overflow-x-auto">
+                                                            <table className="w-full text-[10px] border-collapse">
+                                                                <thead>
+                                                                    <tr className="border-b border-white/10 text-slate-400 text-[9px] uppercase tracking-wider">
+                                                                        {["No","Topik/Materi","TP/Learning Objective","Indikator","Jenis Soal","Kognitif","Kesulitan","Jml Soal","Bobot%","Locked Only","Coverage","Aksi"].map(h => (
+                                                                            <th key={h} className="px-2 py-2 text-left font-semibold whitespace-nowrap">{h}</th>
+                                                                        ))}
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {blueprintRows.map((row, ri) => {
+                                                                        const cov = getBlueprintRowCoverage(row, bankSoalQuestions);
+                                                                        const covColor = cov.status === "ENOUGH" ? "text-emerald-400" : cov.status === "LOW" ? "text-amber-400" : "text-rose-400";
+                                                                        return (
+                                                                            <tr key={row.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                                                                <td className="px-2 py-1.5 text-slate-400 font-mono">{ri+1}</td>
+                                                                                <td className="px-2 py-1">
+                                                                                    <input type="text" value={row.topic} onChange={e => handleUpdateBlueprintRow(row.id,"topic",e.target.value)}
+                                                                                        placeholder="Topik..." className="w-24 bg-slate-800 border border-white/10 rounded px-1.5 py-1 text-white focus:outline-none focus:border-violet-500/50" />
+                                                                                </td>
+                                                                                <td className="px-2 py-1">
+                                                                                    <input type="text" value={row.learningObjective} onChange={e => handleUpdateBlueprintRow(row.id,"learningObjective",e.target.value)}
+                                                                                        placeholder="TP..." className="w-28 bg-slate-800 border border-white/10 rounded px-1.5 py-1 text-white focus:outline-none focus:border-violet-500/50" />
+                                                                                </td>
+                                                                                <td className="px-2 py-1">
+                                                                                    <input type="text" value={row.indicator} onChange={e => handleUpdateBlueprintRow(row.id,"indicator",e.target.value)}
+                                                                                        placeholder="Indikator..." className="w-28 bg-slate-800 border border-white/10 rounded px-1.5 py-1 text-white focus:outline-none focus:border-violet-500/50" />
+                                                                                </td>
+                                                                                <td className="px-2 py-1">
+                                                                                    <select value={row.questionType} onChange={e => handleUpdateBlueprintRow(row.id,"questionType",e.target.value)}
+                                                                                        className="bg-slate-800 border border-white/10 rounded px-1.5 py-1 text-white focus:outline-none focus:border-violet-500/50">
+                                                                                        {["multiple_choice","multiple_select","checkbox","true_false","matching","short_answer","essay","statement_table","any"].map(t => <option key={t} value={t}>{t}</option>)}
+                                                                                    </select>
+                                                                                </td>
+                                                                                <td className="px-2 py-1">
+                                                                                    <select value={row.cognitiveLevel} onChange={e => handleUpdateBlueprintRow(row.id,"cognitiveLevel",e.target.value)}
+                                                                                        className="bg-slate-800 border border-white/10 rounded px-1.5 py-1 text-white focus:outline-none focus:border-violet-500/50">
+                                                                                        {["C1","C2","C3","C4","C5","C6","any"].map(c => <option key={c} value={c}>{c}</option>)}
+                                                                                    </select>
+                                                                                </td>
+                                                                                <td className="px-2 py-1">
+                                                                                    <select value={row.difficultyTarget} onChange={e => handleUpdateBlueprintRow(row.id,"difficultyTarget",e.target.value)}
+                                                                                        className="bg-slate-800 border border-white/10 rounded px-1.5 py-1 text-white focus:outline-none focus:border-violet-500/50">
+                                                                                        {["Easy","Medium","Hard","any"].map(d => <option key={d} value={d}>{d}</option>)}
+                                                                                    </select>
+                                                                                </td>
+                                                                                <td className="px-2 py-1">
+                                                                                    <input type="number" min="0" value={row.questionCount} onChange={e => handleUpdateBlueprintRow(row.id,"questionCount",parseInt(e.target.value)||0)}
+                                                                                        className="w-14 bg-slate-800 border border-white/10 rounded px-1.5 py-1 text-white text-center focus:outline-none focus:border-violet-500/50" />
+                                                                                </td>
+                                                                                <td className="px-2 py-1">
+                                                                                    <input type="number" min="0" max="100" step="0.01" value={row.weightPercent} onChange={e => handleUpdateBlueprintRow(row.id,"weightPercent",parseFloat(e.target.value)||0)}
+                                                                                        className="w-16 bg-slate-800 border border-white/10 rounded px-1.5 py-1 text-white text-center focus:outline-none focus:border-violet-500/50" />
+                                                                                </td>
+                                                                                <td className="px-2 py-1 text-center">
+                                                                                    <input type="checkbox" checked={!!row.requiredLockedOnly} onChange={e => handleUpdateBlueprintRow(row.id,"requiredLockedOnly",e.target.checked)}
+                                                                                        className="accent-violet-500" />
+                                                                                </td>
+                                                                                <td className={`px-2 py-1 ${covColor} whitespace-nowrap`}>
+                                                                                    <div className="font-bold">{cov.status}</div>
+                                                                                    <div className="text-slate-400">{cov.effectiveAvailable}/{cov.requiredCount}</div>
+                                                                                </td>
+                                                                                <td className="px-2 py-1">
+                                                                                    <button onClick={() => handleRemoveBlueprintRow(row.id)}
+                                                                                        className="text-rose-400 hover:text-rose-300 p-1 rounded hover:bg-rose-500/10 transition-colors">
+                                                                                        <SafeIcon name="trash-2" className="w-3 h-3" />
+                                                                                    </button>
+                                                                                </td>
+                                                                            </tr>
+                                                                        );
+                                                                    })}
+                                                                </tbody>
+                                                                <tfoot>
+                                                                    <tr className="border-t border-white/10 text-slate-300 font-bold">
+                                                                        <td className="px-2 py-2" colSpan={7}>Total</td>
+                                                                        <td className={`px-2 py-2 ${pkgSummary.isQuestionCountValid ? "text-emerald-400" : "text-rose-400"}`}>
+                                                                            {pkgSummary.totalAllocatedQuestions} / {assessmentPackageConfig.totalQuestions}
+                                                                        </td>
+                                                                        <td className={`px-2 py-2 ${pkgSummary.isWeightValid ? "text-emerald-400" : "text-rose-400"}`}>
+                                                                            {pkgSummary.totalWeightPercent}%
+                                                                        </td>
+                                                                        <td colSpan={3}></td>
+                                                                    </tr>
+                                                                </tfoot>
+                                                            </table>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* C. VALIDATION PANEL */}
+                                                {(() => {
+                                                    const packageValidationStatusStyles = {
+                                                        READY: {
+                                                            bg: "bg-emerald-500/10",
+                                                            border: "border-emerald-500/30",
+                                                            text: "text-emerald-300",
+                                                            icon: "text-emerald-400"
+                                                        },
+                                                        WARNING: {
+                                                            bg: "bg-amber-500/10",
+                                                            border: "border-amber-500/30",
+                                                            text: "text-amber-300",
+                                                            icon: "text-amber-400"
+                                                        },
+                                                        NOT_READY: {
+                                                            bg: "bg-rose-500/10",
+                                                            border: "border-rose-500/30",
+                                                            text: "text-rose-300",
+                                                            icon: "text-rose-400"
+                                                        }
+                                                    };
+
+                                                    const packageValidationFallbackStyles = {
+                                                        bg: "bg-slate-500/10",
+                                                        border: "border-slate-500/30",
+                                                        text: "text-slate-300",
+                                                        icon: "text-slate-400"
+                                                    };
+
+                                                    const styles = packageValidationStatusStyles[pkgValidation.status] || packageValidationFallbackStyles;
+
+                                                    return (
+                                                        <div className={styles.bg + " border " + styles.border + " rounded-xl p-4 space-y-3"}>
+                                                            <div className="flex items-center gap-2">
+                                                                <SafeIcon name={pkgValidation.status === "READY" ? "check-circle" : pkgValidation.status === "WARNING" ? "alert-triangle" : "x-circle"}
+                                                                    className={"w-5 h-5 " + styles.icon} />
+                                                                <span className={"text-sm font-bold " + styles.text}>
+                                                                    Status Konfigurasi: {pkgValidation.status}
+                                                                </span>
+                                                            </div>
+
+                                                            {pkgValidation.blockers.length > 0 && (
+                                                                <div className="space-y-1">
+                                                                    <div className="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Blocker</div>
+                                                                    {pkgValidation.blockers.map((b, i) => (
+                                                                        <div key={i} className="flex items-start gap-1.5 text-xs text-rose-300">
+                                                                            <SafeIcon name="x" className="w-3 h-3 shrink-0 mt-0.5 text-rose-400" />
+                                                                            {b}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+
+                                                            {pkgValidation.warnings.length > 0 && (
+                                                                <div className="space-y-1">
+                                                                    <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Peringatan</div>
+                                                                    {pkgValidation.warnings.map((w, i) => (
+                                                                        <div key={i} className="flex items-start gap-1.5 text-xs text-amber-300">
+                                                                            <SafeIcon name="alert-circle" className="w-3 h-3 shrink-0 mt-0.5 text-amber-400" />
+                                                                            {w}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+
+                                                            {blueprintRows.length > 0 && (
+                                                                <div className="grid grid-cols-3 gap-3 pt-2 border-t border-white/10">
+                                                                    {[
+                                                                        { label: "Jenis Soal", dist: pkgSummary.questionTypeDistribution },
+                                                                        { label: "Level Kognitif", dist: pkgSummary.cognitiveLevelDistribution },
+                                                                        { label: "Kesulitan", dist: pkgSummary.difficultyDistribution }
+                                                                    ].map(({ label, dist }) => (
+                                                                        <div key={label}>
+                                                                            <div className="text-[9px] text-slate-400 uppercase tracking-wider font-bold mb-1">{label}</div>
+                                                                            {Object.entries(dist).map(([k, v]) => (
+                                                                                <div key={k} className="flex justify-between text-[10px]">
+                                                                                    <span className="text-slate-300">{k}</span>
+                                                                                    <span className="text-white font-bold">{v}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
+
+                                                {/* D. EXPORT BUTTON */}
+                                                <div className="flex items-center justify-between flex-wrap gap-3 pt-2">
+                                                    <div className="text-xs text-slate-400">
+                                                        Export tidak akan memilih atau mengacak soal. Data ini digunakan oleh MVP 13.
+                                                    </div>
+                                                    <button
+                                                        onClick={handleExportAssessmentPackageConfig}
+                                                        className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl font-bold text-xs shadow-lg shadow-violet-600/30 transition-all"
+                                                    >
+                                                        <SafeIcon name="download" className="w-4 h-4" />
+                                                        <span>Export Package Config JSON</span>
+                                                    </button>
+                                                </div>
+
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                                {/* === END MVP 12 === */}
 
                                 <div className="flex justify-between pt-6 border-t border-white/10">
                                     <ButtonPrimary onClick={() => setStep(4)} icon="arrow-right">Lanjut ke Rubrik Sikap</ButtonPrimary>
