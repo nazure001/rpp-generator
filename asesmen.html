@@ -580,35 +580,63 @@
                 const metaTeacher = formData.guru || (importedDraft && importedDraft.metadata && importedDraft.metadata.teacher) || "";
 
                 const items = list.map((q, idx) => {
-                    const optionsArray = Array.isArray(q.options) ? q.options : [];
-                    const type = optionsArray.length > 0 ? "multiple_choice" : "paragraph_text";
-                    const optionsMapped = optionsArray.map(opt => ({
-                        key: opt.key,
-                        text: opt.text || "",
-                        isCorrect: opt.key === q.answerKey
-                    }));
+                    const normalized = normalizeQuestionForAdvancedSchema(q, idx);
+                    const mapping = getQuestionTypeGoogleFormMapping(normalized.type);
+                    
+                    let type = "multiple_choice";
+                    if (normalized.type === "multiple_select" || normalized.type === "checkbox") {
+                        type = "checkbox";
+                    } else if (normalized.type === "true_false") {
+                        type = "multiple_choice";
+                    } else if (normalized.type === "matching" || normalized.type === "statement_table") {
+                        type = "grid";
+                    } else if (normalized.type === "short_answer") {
+                        type = "short_answer";
+                    } else if (normalized.type === "essay") {
+                        type = "paragraph_text";
+                    }
+
+                    let optionsMapped = [];
+                    if (normalized.type === "true_false") {
+                        optionsMapped = [
+                            { key: "Benar", text: "Benar", isCorrect: normalized.answerKey === "Benar" },
+                            { key: "Salah", text: "Salah", isCorrect: normalized.answerKey === "Salah" }
+                        ];
+                    } else if (Array.isArray(normalized.options)) {
+                        optionsMapped = normalized.options.map(opt => ({
+                            key: opt.key,
+                            text: opt.text || "",
+                            isCorrect: (normalized.type === "multiple_select" || normalized.type === "checkbox")
+                                ? (normalized.answerKeys || []).includes(opt.key)
+                                : opt.key === normalized.answerKey
+                        }));
+                    }
 
                     return {
                         itemId: `q-${idx + 1}`,
                         type: type,
-                        title: q.questionText || "",
-                        helpText: q.stimulus || "",
+                        title: normalized.questionText || "",
+                        helpText: normalized.stimulus || "",
                         required: true,
-                        points: q.score || 1,
+                        points: normalized.score || 1,
                         shuffleOptions: false,
                         options: optionsMapped,
-                        answerKey: q.answerKey || "",
+                        answerKey: normalized.answerKey || "",
+                        answerKeys: normalized.answerKeys || [],
+                        matchingAnswerKey: normalized.matchingAnswerKey || [],
+                        shortAnswerKeys: normalized.shortAnswerKeys || [],
+                        rubric: normalized.rubric || [],
+                        statements: normalized.statements || [],
+                        pairs: normalized.pairs || [],
                         feedback: {
-                            correct: "Benar.",
-                            incorrect: "Pelajari kembali pembahasan soal.",
-                            explanation: q.explanation || ""
-                        },
                         source: {
-                            questionId: q.id || "",
-                            number: q.number || idx + 1,
-                            cognitiveLevel: String(q.cognitiveLevel || "").substring(0, 2).toUpperCase() || "C3",
-                            indicator: q.indicator || "",
-                            reviewStatus: q.reviewStatus || "Validated"
+                            questionId: normalized.questionId || "",
+                            number: normalized.number || idx + 1,
+                            cognitiveLevel: normalized.cognitiveLevel || "C3",
+                            indicator: normalized.indicator || "",
+                            reviewStatus: normalized.reviewStatus || "Validated",
+                            googleFormMapping: mapping,
+                            originalType: normalized.type
                         }
                     };
                 });
@@ -617,6 +645,7 @@
                     number: item.source.number,
                     questionId: item.source.questionId,
                     answer: item.answerKey,
+                    answerKeys: item.answerKeys,
                     points: item.points
                 }));
 
@@ -628,14 +657,21 @@
                 }
 
                 items.forEach((item, idx) => {
+                    const mapping = item.source.googleFormMapping;
+                    if (!mapping.supported) {
+                        warnings.push(`Soal #${idx + 1}: Tipe soal ${item.source.originalType || item.type} belum didukung penuh oleh Google Form Blueprint.`);
+                    }
                     if (item.type === "multiple_choice" && (!item.answerKey || !item.answerKey.trim())) {
                         blockers.push(`Soal #${idx + 1} Pilihan Ganda tidak memiliki kunci jawaban.`);
+                    }
+                    if (item.type === "checkbox" && (item.answerKeys || []).length === 0) {
+                        blockers.push(`Soal #${idx + 1} Pilihan Ganda Kompleks/Checkbox tidak memiliki kunci jawaban.`);
                     }
                     if (item.type === "multiple_choice" && item.options.length === 0) {
                         warnings.push(`Soal #${idx + 1} Pilihan Ganda tidak memiliki opsi jawaban.`);
                     }
-                    if (item.type === "paragraph_text") {
-                        warnings.push(`Soal #${idx + 1} adalah tipe Uraian. Tipe soal ini akan diexport sebagai Paragraph Text (belum didukung penuh oleh Google Form Blueprint otomatis).`);
+                    if (item.type === "grid") {
+                        warnings.push(`Soal #${idx + 1} adalah tipe Menjodohkan/Tabel Pernyataan. Ini akan diexport sebagai Grid Blueprint.`);
                     }
                     if (item.source.reviewStatus !== "Locked") {
                         warnings.push(`Soal #${idx + 1} belum dikunci (Locked) oleh Panitia.`);
@@ -719,6 +755,172 @@
                 downloadAnchor.click();
                 document.body.removeChild(downloadAnchor);
                 URL.revokeObjectURL(url);
+            };
+
+            // --- MVP 10: Advanced Question Type Schema Helpers ---
+            const normalizeAdvancedQuestionType = (type) => {
+                const t = String(type || "").toLowerCase().trim();
+                if (t === "pilihan_ganda" || t === "multiple_choice" || t === "pilihan ganda") return "multiple_choice";
+                if (t === "pg_kompleks" || t === "multiple_select" || t === "pilihan ganda kompleks") return "multiple_select";
+                if (t === "checkbox") return "checkbox";
+                if (t === "benar_salah" || t === "true_false" || t === "benar-salah") return "true_false";
+                if (t === "menjodohkan" || t === "matching") return "matching";
+                if (t === "isian_singkat" || t === "short_answer" || t === "isian singkat") return "short_answer";
+                if (t === "uraian" || t === "essay") return "essay";
+                if (t === "statement_table") return "statement_table";
+                return "multiple_choice";
+            };
+
+            const normalizeQuestionForAdvancedSchema = (q, idx = 0) => {
+                q = q || {};
+                const normalizedType = normalizeAdvancedQuestionType(q.type);
+                
+                // Map difficulty target — only fall back to legacy difficulty if difficultyTarget is not set
+                let diffTarget = q.difficultyTarget || "Medium";
+                if (!q.difficultyTarget) {
+                    if (q.difficulty === "Mudah" || q.difficulty === "Easy") diffTarget = "Easy";
+                    if (q.difficulty === "Sedang" || q.difficulty === "Medium") diffTarget = "Medium";
+                    if (q.difficulty === "Sukar" || q.difficulty === "Hard") diffTarget = "Hard";
+                }
+
+                // Options mapping — normalize string arrays to {key, text} objects
+                let options = q.options || [];
+                if (Array.isArray(options)) {
+                    options = options.map(opt => {
+                        if (typeof opt === 'string') {
+                            const match = opt.match(/^([A-E])[\.\)]\s*(.*)/i);
+                            return match ? { key: match[1].toUpperCase(), text: match[2].trim() } : { key: "", text: opt };
+                        } else if (opt && typeof opt === 'object') {
+                            let normalizedKey = "";
+                            let normalizedText = "";
+                            if (opt.key) {
+                                normalizedKey = String(opt.key).trim().toUpperCase();
+                            }
+                            if (opt.text) {
+                                normalizedText = String(opt.text).trim();
+                                // If opt.text starts with A. or A) , extract the key and remove the prefix.
+                                const match = normalizedText.match(/^([A-E])[\.\)]\s*(.*)/i);
+                                if (match) {
+                                    if (!normalizedKey) {
+                                        normalizedKey = match[1].toUpperCase();
+                                    }
+                                    normalizedText = match[2].trim();
+                                }
+                            }
+                            return {
+                                ...opt,
+                                key: normalizedKey,
+                                text: normalizedText
+                            };
+                        }
+                        return { key: "", text: String(opt || "") };
+                    });
+                }
+
+                // Answer keys mapping
+                let answerKeys = q.answerKeys || [];
+                if ((normalizedType === "multiple_select" || normalizedType === "checkbox") && answerKeys.length === 0 && q.answerKey) {
+                    answerKeys = [q.answerKey];
+                }
+
+                // Metadata mappings
+                const metaSchool = formData.sekolah || (importedDraft && importedDraft.metadata && importedDraft.metadata.school) || "";
+                const metaSubject = selectedMapel || (importedDraft && importedDraft.metadata && importedDraft.metadata.subject) || "";
+                const metaGrade = formData.kelas || (importedDraft && importedDraft.metadata && (importedDraft.metadata.grade || importedDraft.metadata.semester)) || "";
+                const metaTopic = formData.topik || (importedDraft && importedDraft.metadata && importedDraft.metadata.topic) || "";
+                const metaCP = formData.capaianPembelajaran || selectedCP || (importedDraft && importedDraft.curriculumReference && importedDraft.curriculumReference.capaianPembelajaran) || "";
+                const metaTP = formData.tujuanPembelajaran || (importedDraft && importedDraft.curriculumReference && importedDraft.curriculumReference.tujuanPembelajaran) || "";
+
+                const defaultCardMetadata = {
+                    phase: selectedFase || "",
+                    grade: metaGrade,
+                    subject: metaSubject,
+                    topic: metaTopic,
+                    learningObjective: metaTP,
+                    indicator: q.indicator || "",
+                    questionForm: normalizedType,
+                    cognitiveLevel: q.cognitiveLevel || "C3",
+                    difficultyTarget: diffTarget,
+                    predictedDiscrimination: q.predictedDiscrimination || "Medium",
+                    scoringGuide: q.explanation || "",
+                    reviewNotes: q.reviewerNotes || ""
+                };
+
+                const defaultIllustration = {
+                    mode: q.illustration?.mode || "none",
+                    type: q.illustration?.type || "",
+                    prompt: q.illustration?.prompt || "",
+                    imageUrl: q.illustration?.imageUrl || q.image || "",
+                    altText: q.illustration?.altText || ""
+                };
+
+                return {
+                    questionId: q.questionId || q.id || generateUUID(),
+                    id: q.id || q.questionId || generateUUID(),
+                    number: q.number || q.no || (idx + 1),
+                    subject: metaSubject,
+                    grade: metaGrade,
+                    topic: metaTopic,
+                    type: normalizedType,
+                    stimulus: q.stimulus || "",
+                    questionText: q.questionText || q.soal || "",
+                    options: options,
+                    statements: q.statements || [],
+                    pairs: q.pairs || [],
+                    answerKey: q.answerKey || q.correctAnswer || q.kunci || "",
+                    answerKeys: answerKeys,
+                    matchingAnswerKey: q.matchingAnswerKey || [],
+                    shortAnswerKeys: q.shortAnswerKeys || [],
+                    rubric: q.rubric || [],
+                    score: q.score || 1,
+                    cognitiveLevel: q.cognitiveLevel || "C3",
+                    difficultyTarget: diffTarget,
+                    predictedDiscrimination: q.predictedDiscrimination || "Medium",
+                    indicator: q.indicator || "",
+                    material: q.material || q.topic || metaTopic,
+                    explanation: q.explanation || q.pembahasan || "",
+                    illustration: { ...defaultIllustration, ...(q.illustration || {}) },
+                    cardMetadata: { ...defaultCardMetadata, ...(q.cardMetadata || {}) },
+                    validationStatus: q.validationStatus || "Pending",
+                    reviewStatus: q.reviewStatus || "Validated"
+                };
+            };
+
+            const getQuestionTypeLabel = (type) => {
+                const t = normalizeAdvancedQuestionType(type);
+                switch (t) {
+                    case "multiple_choice": return "Pilihan Ganda";
+                    case "multiple_select": return "Pilihan Ganda Kompleks";
+                    case "checkbox": return "Checkbox Multi-Select";
+                    case "true_false": return "Benar / Salah";
+                    case "matching": return "Menjodohkan";
+                    case "short_answer": return "Isian Singkat";
+                    case "essay": return "Uraian / Essay";
+                    case "statement_table": return "Tabel Pernyataan (Grid)";
+                    default: return "Pilihan Ganda";
+                }
+            };
+
+            const getQuestionTypeGoogleFormMapping = (type) => {
+                const t = normalizeAdvancedQuestionType(type);
+                switch (t) {
+                    case "multiple_choice":
+                        return { googleFormType: "MULTIPLE_CHOICE", supported: true, notes: "Didukung penuh oleh Google Form." };
+                    case "multiple_select":
+                    case "checkbox":
+                        return { googleFormType: "CHECKBOX", supported: true, notes: "Didukung penuh sebagai checkbox multi-select." };
+                    case "true_false":
+                        return { googleFormType: "MULTIPLE_CHOICE", supported: true, notes: "Didukung penuh sebagai pilihan ganda Benar/Salah." };
+                    case "matching":
+                    case "statement_table":
+                        return { googleFormType: "GRID", supported: true, notes: "Didukung sebagai Multiple Choice Grid (baris & kolom)." };
+                    case "short_answer":
+                        return { googleFormType: "SHORT_ANSWER", supported: true, notes: "Didukung penuh untuk isian singkat." };
+                    case "essay":
+                        return { googleFormType: "PARAGRAPH_TEXT", supported: true, notes: "Didukung sebagai Paragraph Text long-answer." };
+                    default:
+                        return { googleFormType: "UNSUPPORTED", supported: false, notes: "Tipe soal tidak dikenali." };
+                }
             };
 
             const [formData, setFormData] = useState({
@@ -1521,63 +1723,59 @@
                         estimatedQuestionCount: item.estimatedQuestionCount || (String(item.questionType || item.bentuk).toLowerCase().includes("uraian") ? 1 : 2)
                     })),
                     questions: bankSoalQuestions.length > 0
-                        ? bankSoalQuestions.map(q => ({
-                            questionId: q.id || generateUUID(),
-                            number: q.number,
-                            type: "Pilihan Ganda",
-                            stimulus: q.stimulus || "",
-                            questionText: q.questionText || "",
-                            options: Array.isArray(q.options)
-                                ? q.options.reduce((acc, o) => {
-                                    if (o && o.key) acc[o.key] = o.text || "";
-                                    return acc;
-                                  }, {})
-                                : {},
-                            correctAnswer: q.answerKey || "",
-                            cognitiveLevel: normalizeCognitiveLevel(q.cognitiveLevel),
-                            indicator: q.indicator || "",
-                            topic: q.material || metaTopic,
-                            subject: metaSubject,
-                            grade: metaGrade,
-                            score: q.score || 1,
-                            explanation: q.explanation || "",
-                            validationStatus: mapQuestionValidationStatus(q.validationStatus),
-                            reviewStatus: q.reviewStatus || "Validated",
-                            reviewerName: q.reviewerName || "",
-                            reviewerNotes: q.reviewerNotes || "",
-                            reviewedAt: q.reviewedAt || "",
-                            lockedAt: q.lockedAt || ""
-                          }))
+                        ? bankSoalQuestions.map((q, idx) => {
+                            const normalized = normalizeQuestionForAdvancedSchema(q, idx);
+                            return {
+                                ...normalized,
+                                type: normalized.type === "multiple_choice" ? "Pilihan Ganda" : (normalized.type === "essay" ? "Uraian" : normalized.type),
+                                options: Array.isArray(normalized.options)
+                                    ? normalized.options.reduce((acc, o) => {
+                                        if (o && o.key) acc[o.key] = o.text || "";
+                                        return acc;
+                                      }, {})
+                                    : normalized.options,
+                                correctAnswer: normalized.answerKey || "",
+                                validationStatus: mapQuestionValidationStatus(normalized.validationStatus)
+                            };
+                          })
                         : importedDraft ? [] : [
-                        ...formData.soalPG.map(q => ({
-                            questionId: generateUUID(),
-                            number: q.no,
-                            type: "multiple_choice",
-                            questionText: q.soal,
-                            options: q.opsi,
-                            correctAnswer: q.kunci,
-                            explanation: q.pembahasan,
-                            cognitiveLevel: formData.bloom || "C4",
-                            reviewStatus: "Validated",
-                            reviewerName: "",
-                            reviewerNotes: "",
-                            reviewedAt: "",
-                            lockedAt: ""
-                        })),
-                        ...formData.soalUraian.map(q => ({
-                            questionId: generateUUID(),
-                            number: q.no + formData.soalPG.length,
-                            type: "essay",
-                            questionText: q.soal,
-                            guidelines: q.rambu,
-                            maxScore: q.skorMaks,
-                            cognitiveLevel: q.level || "C5",
-                            reviewStatus: "Validated",
-                            reviewerName: "",
-                            reviewerNotes: "",
-                            reviewedAt: "",
-                            lockedAt: ""
-                        }))
+                        ...formData.soalPG.map((q, idx) => {
+                            const rawQ = {
+                                type: "multiple_choice",
+                                no: q.no,
+                                soal: q.soal,
+                                options: typeof q.opsi === 'object' && q.opsi !== null ? Object.entries(q.opsi).map(([k, v]) => ({ key: k, text: v })) : [],
+                                answerKey: q.kunci,
+                                explanation: q.pembahasan,
+                                cognitiveLevel: formData.bloom || "C4"
+                            };
+                            const normalized = normalizeQuestionForAdvancedSchema(rawQ, idx);
+                            return {
+                                ...normalized,
+                                type: "Pilihan Ganda",
+                                options: normalized.options,
+                                correctAnswer: normalized.answerKey || "",
+                                validationStatus: "Valid"
+                            };
+                        }),
+                        ...formData.soalUraian.map((q, idx) => {
+                            const rawQ = {
+                                type: "essay",
+                                no: q.no + formData.soalPG.length,
+                                soal: q.soal,
+                                explanation: q.rambu,
+                                score: q.skorMaks,
+                                cognitiveLevel: q.level || "C5"
+                            };
+                            const normalized = normalizeQuestionForAdvancedSchema(rawQ, idx + formData.soalPG.length);
+                            return {
+                                ...normalized,
+                                type: "Uraian",
+                                options: {},
+                                correctAnswer: normalized.answerKey || "",
+                                validationStatus: "Valid"
+                            };
+                        })
                     ],
                     answerKey: bankSoalQuestions.length > 0
                         ? bankSoalQuestions.map(q => ({ number: q.number, answer: q.answerKey, explanation: q.explanation || "" }))
@@ -2597,6 +2795,120 @@
                                             <div className="p-3 bg-slate-950/40 border border-white/5 rounded-xl text-xs text-slate-400 leading-relaxed flex items-start gap-2">
                                                 <SafeIcon name="info" className="w-4 h-4 mt-0.5 text-violet-400 shrink-0" />
                                                 <span>Blueprint ini belum membuat Google Form otomatis. File JSON ini disiapkan untuk integrasi Google Apps Script tahap berikutnya.</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* KAPABILITAS TIPE SOAL PANEL */}
+                                {(() => {
+                                    const list = Array.isArray(bankSoalQuestions) && bankSoalQuestions.length > 0
+                                        ? bankSoalQuestions
+                                        : (Array.isArray(formData.soalPG) ? formData.soalPG.map(q => ({ type: "multiple_choice" })) : []);
+
+                                    const normalizedList = list.map((q, idx) => normalizeQuestionForAdvancedSchema(q, idx));
+
+                                    const counts = {
+                                        multiple_choice: 0,
+                                        multiple_select: 0,
+                                        checkbox: 0,
+                                        true_false: 0,
+                                        matching: 0,
+                                        short_answer: 0,
+                                        essay: 0,
+                                        statement_table: 0
+                                    };
+                                    normalizedList.forEach(q => {
+                                        if (counts[q.type] !== undefined) {
+                                            counts[q.type]++;
+                                        } else {
+                                            counts.multiple_choice++;
+                                        }
+                                    });
+
+                                    const gfCounts = {
+                                        direct: 0,
+                                        grid: 0,
+                                        paragraph: 0,
+                                        unsupported: 0
+                                    };
+                                    normalizedList.forEach(q => {
+                                        const mapping = getQuestionTypeGoogleFormMapping(q.type);
+                                        if (mapping.googleFormType === "MULTIPLE_CHOICE" || mapping.googleFormType === "CHECKBOX" || mapping.googleFormType === "SHORT_ANSWER") {
+                                            gfCounts.direct++;
+                                        } else if (mapping.googleFormType === "GRID") {
+                                            gfCounts.grid++;
+                                        } else if (mapping.googleFormType === "PARAGRAPH_TEXT") {
+                                            gfCounts.paragraph++;
+                                        } else {
+                                            gfCounts.unsupported++;
+                                        }
+                                    });
+
+                                    return (
+                                        <div className="glass-panel p-6 rounded-2xl border border-white/10 no-print space-y-4">
+                                            <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                                                <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                                                    <SafeIcon name="layers" className="w-6 h-6" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-sm font-bold text-white">Kapabilitas Tipe Soal (Schema Capability)</h3>
+                                                    <p className="text-xs text-slate-400 mt-0.5">Pemetaan keragaman tipe soal terhadap skema universal dan kesiapan konversi Google Form.</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                <div className="col-span-2 space-y-2 border-r border-white/5 pr-4">
+                                                    <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Keragaman Tipe Soal (Data Model)</span>
+                                                    <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
+                                                        <div className="flex justify-between p-2 bg-slate-900/40 rounded-xl border border-white/5">
+                                                            <span>Pilihan Ganda:</span>
+                                                            <span className="font-bold text-white">{counts.multiple_choice}</span>
+                                                        </div>
+                                                        <div className="flex justify-between p-2 bg-slate-900/40 rounded-xl border border-white/5">
+                                                            <span>PG Kompleks:</span>
+                                                            <span className="font-bold text-white">{counts.multiple_select + counts.checkbox}</span>
+                                                        </div>
+                                                        <div className="flex justify-between p-2 bg-slate-900/40 rounded-xl border border-white/5">
+                                                            <span>Benar - Salah:</span>
+                                                            <span className="font-bold text-white">{counts.true_false}</span>
+                                                        </div>
+                                                        <div className="flex justify-between p-2 bg-slate-900/40 rounded-xl border border-white/5">
+                                                            <span>Menjodohkan:</span>
+                                                            <span className="font-bold text-white">{counts.matching}</span>
+                                                        </div>
+                                                        <div className="flex justify-between p-2 bg-slate-900/40 rounded-xl border border-white/5">
+                                                            <span>Isian Singkat:</span>
+                                                            <span className="font-bold text-white">{counts.short_answer}</span>
+                                                        </div>
+                                                        <div className="flex justify-between p-2 bg-slate-900/40 rounded-xl border border-white/5">
+                                                            <span>Uraian / Essay:</span>
+                                                            <span className="font-bold text-white">{counts.essay}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="col-span-2 space-y-2 pl-2">
+                                                    <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Kesiapan Google Form Handoff</span>
+                                                    <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
+                                                        <div className="flex justify-between p-2 bg-slate-900/40 rounded-xl border border-white/5">
+                                                            <span className="text-emerald-400">Supported Directly:</span>
+                                                            <span className="font-bold text-white">{gfCounts.direct}</span>
+                                                        </div>
+                                                        <div className="flex justify-between p-2 bg-slate-900/40 rounded-xl border border-white/5">
+                                                            <span className="text-amber-400">Supported as Grid:</span>
+                                                            <span className="font-bold text-white">{gfCounts.grid}</span>
+                                                        </div>
+                                                        <div className="flex justify-between p-2 bg-slate-900/40 rounded-xl border border-white/5">
+                                                            <span className="text-violet-400">Supported as Para:</span>
+                                                            <span className="font-bold text-white">{gfCounts.paragraph}</span>
+                                                        </div>
+                                                        <div className="flex justify-between p-2 bg-slate-900/40 rounded-xl border border-white/5">
+                                                            <span className="text-rose-400">Unsupported:</span>
+                                                            <span className="font-bold text-white">{gfCounts.unsupported}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     );
