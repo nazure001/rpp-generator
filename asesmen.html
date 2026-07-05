@@ -636,7 +636,7 @@
                         source: {
                             questionId: normalized.questionId || "",
                             number: normalized.number || idx + 1,
-                            originalType: q.type || "",
+                            originalType: normalized.type,
                             cognitiveLevel: normalized.cognitiveLevel || "C3",
                             indicator: normalized.indicator || "",
                             reviewStatus: normalized.reviewStatus || "Validated",
@@ -795,14 +795,29 @@
                             const match = opt.match(/^([A-E])[\.\)]\s*(.*)/i);
                             return match ? { key: match[1].toUpperCase(), text: match[2].trim() } : { key: "", text: opt };
                         } else if (opt && typeof opt === 'object') {
-                            if (!opt.key && opt.text) {
-                                const match = String(opt.text).match(/^([A-E])[\.\)]\s*(.*)/i);
+                            let normalizedKey = "";
+                            let normalizedText = "";
+                            if (opt.key) {
+                                normalizedKey = String(opt.key).trim().toUpperCase();
+                            }
+                            if (opt.text) {
+                                normalizedText = String(opt.text).trim();
+                                // If opt.text starts with A. or A) , extract the key and remove the prefix.
+                                const match = normalizedText.match(/^([A-E])[\.\)]\s*(.*)/i);
                                 if (match) {
-                                    return { key: match[1].toUpperCase(), text: match[2].trim(), isCorrect: opt.isCorrect };
+                                    if (!normalizedKey) {
+                                        normalizedKey = match[1].toUpperCase();
+                                    }
+                                    normalizedText = match[2].trim();
                                 }
                             }
+                            return {
+                                ...opt,
+                                key: normalizedKey,
+                                text: normalizedText
+                            };
                         }
-                        return opt;
+                        return { key: "", text: String(opt || "") };
                     });
                 }
 
@@ -847,10 +862,10 @@
                     questionId: q.questionId || q.id || generateUUID(),
                     id: q.id || q.questionId || generateUUID(),
                     number: q.number || q.no || (idx + 1),
-                    type: normalizedType,
                     subject: metaSubject,
                     grade: metaGrade,
                     topic: metaTopic,
+                    type: normalizedType,
                     stimulus: q.stimulus || "",
                     questionText: q.questionText || q.soal || "",
                     options: options,
