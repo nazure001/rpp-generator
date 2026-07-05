@@ -436,7 +436,6 @@
                     }
                     
                     let maxScore = 0;
-                    let matchReason = "";
                     let duplicateOfId = null;
                     
                     for (let i = 0; i < list.length; i++) {
@@ -448,12 +447,18 @@
                         
                         const score = calculateSimilarity(q.questionText, other.questionText);
                         if (score > maxScore) {
+                            // Fix #4: for exact duplicate, only the LATER item is flagged;
+                            // the first occurrence (lower index) stays UNIQUE.
+                            if (score === 1.0 && i > idx) {
+                                continue;
+                            }
                             maxScore = score;
                             duplicateOfId = other.questionId || other.id;
                         }
                     }
                     
-                    let status = "OK";
+                    // Fix #3: use UNIQUE instead of OK
+                    let status = "UNIQUE";
                     let reason = "Tidak ada kemiripan signifikan.";
                     
                     if (maxScore === 1.0) {
@@ -472,8 +477,9 @@
                         duplicateCheck: {
                             status,
                             score: maxScore,
+                            matchedQuestionId: duplicateOfId || "",
                             reason,
-                            duplicateOfId
+                            checkedAt: new Date().toISOString()
                         }
                     };
                 });
@@ -481,10 +487,13 @@
 
             const startEditBankQuestion = (q) => {
                 setEditingBankQuestionId(q.questionId || q.id);
+                // Fix #1: include answerKey and cognitiveLevel in editor init
                 setEditBankFormData({
                     stimulus: q.stimulus || "",
                     questionText: q.questionText || "",
-                    material: q.material || q.topic || ""
+                    material: q.material || q.topic || "",
+                    answerKey: q.answerKey || "",
+                    cognitiveLevel: q.cognitiveLevel || ""
                 });
             };
 
@@ -493,12 +502,16 @@
                     const next = [...prev];
                     const idx = next.findIndex(q => (q.questionId || q.id) === editingBankQuestionId);
                     if (idx !== -1) {
+                        // Fix #1: persist answerKey, cognitiveLevel, and updatedAt
                         next[idx] = {
                             ...next[idx],
                             stimulus: editBankFormData.stimulus,
                             questionText: editBankFormData.questionText,
                             material: editBankFormData.material,
-                            topic: editBankFormData.material
+                            topic: editBankFormData.material,
+                            answerKey: editBankFormData.answerKey,
+                            cognitiveLevel: editBankFormData.cognitiveLevel,
+                            updatedAt: new Date().toISOString()
                         };
                         return calculateDuplicateScores(next);
                     }
@@ -520,7 +533,8 @@
                         number: prev.length + 1,
                         reviewStatus: "Draft",
                         bankStatus: "active",
-                        duplicateCheck: { status: "OK", reason: "Duplikasi baru" }
+                        // Fix #3: use UNIQUE as default status
+                        duplicateCheck: { status: "UNIQUE", score: 0, matchedQuestionId: "", reason: "Soal baru (duplikasi).", checkedAt: new Date().toISOString() }
                     };
                     
                     const next = [...prev];
@@ -2861,9 +2875,9 @@
                                                                                          }`}>
                                                                                              {check.status || "UNIQUE"}
                                                                                          </span>
-                                                                                         {check.matchedReason && (
+                                                                                         {check.reason && check.status !== "UNIQUE" && (
                                                                                              <div className="text-[10px] text-slate-400 mt-1 max-w-xs leading-relaxed italic">
-                                                                                                 {check.matchedReason}
+                                                                                                 {check.reason}
                                                                                              </div>
                                                                                          )}
                                                                                      </div>
