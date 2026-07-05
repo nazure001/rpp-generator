@@ -1346,11 +1346,14 @@
                     return qTopic.includes(target);
                 };
                 const matchType = (q) => row.questionType === "any" || !row.questionType ||
-                    (q.questionType || q.type || "") === row.questionType;
+                    normalizeAdvancedQuestionType(q.questionType || q.type || "") === normalizeAdvancedQuestionType(row.questionType);
                 const matchLevel = (q) => row.cognitiveLevel === "any" || !row.cognitiveLevel ||
                     (q.cognitiveLevel || "").toUpperCase().startsWith(row.cognitiveLevel.toUpperCase());
-                const matchDiff = (q) => row.difficultyTarget === "any" || !row.difficultyTarget ||
-                    (q.difficulty || q.difficultyLevel || "").toLowerCase() === row.difficultyTarget.toLowerCase();
+                const matchDiff = (q) => {
+                    if (row.difficultyTarget === "any" || !row.difficultyTarget) return true;
+                    const qDiff = q.difficultyTarget || q.difficulty || q.difficultyLevel || "Medium";
+                    return qDiff.toLowerCase() === row.difficultyTarget.toLowerCase();
+                };
                 const matched = active.filter(q => matchTopic(q) && matchType(q) && matchLevel(q) && matchDiff(q));
                 const lockedMatched = matched.filter(q => q.reviewStatus === "Locked");
                 const required = parseInt(row.questionCount) || 0;
@@ -1473,8 +1476,31 @@
                 a.download = `assessment-package-config-${slug(assessmentPackageConfig.assessmentType)}-${slug(assessmentPackageConfig.subject)}-${new Date().toISOString().slice(0,10)}.json`;
                 a.href = url;
                 a.click();
-                URL.revokeObjectURL(url);
             };
+
+            const pkgSummary = React.useMemo(
+                () => calculateBlueprintSummary(blueprintRows, assessmentPackageConfig),
+                [blueprintRows, assessmentPackageConfig]
+            );
+
+            const pkgValidation = React.useMemo(
+                () => validateAssessmentPackageConfig(assessmentPackageConfig, blueprintRows, bankSoalQuestions),
+                [assessmentPackageConfig, blueprintRows, bankSoalQuestions]
+            );
+
+            React.useEffect(() => {
+                if (showPackageConfig) {
+                    setAssessmentPackageConfig(prev => ({
+                        ...prev,
+                        subject: prev.subject || selectedMapel || "",
+                        phase: prev.phase || selectedFase || "",
+                        grade: prev.grade || formData.kelas || "",
+                        semester: prev.semester || formData.semester || "",
+                        packageTitle: prev.packageTitle || (formData.topik ? "Paket Asesmen " + formData.topik : "")
+                    }));
+                }
+            }, [showPackageConfig, selectedMapel, selectedFase, formData.kelas, formData.semester, formData.topik]);
+
 
             // --- MVP 6: Parser Event Handlers ---
             const handleParseQuestions = () => {
@@ -3388,10 +3414,6 @@
                                     </button>
 
                                     {showPackageConfig && (() => {
-                                        const pkgSummary = calculateBlueprintSummary(blueprintRows, assessmentPackageConfig);
-                                        const pkgValidation = validateAssessmentPackageConfig(assessmentPackageConfig, blueprintRows, bankSoalQuestions);
-                                        const statusColors = { READY: "emerald", WARNING: "amber", NOT_READY: "rose" };
-                                        const sc = statusColors[pkgValidation.status] || "slate";
                                         return (
                                             <div className="px-5 pb-5 space-y-5 border-t border-white/10">
 
@@ -3595,14 +3617,48 @@
                                                 </div>
 
                                                 {/* C. VALIDATION PANEL */}
-                                                <div className={`bg-${sc}-500/10 border border-${sc}-500/30 rounded-xl p-4 space-y-3`}>
-                                                    <div className="flex items-center gap-2">
-                                                        <SafeIcon name={pkgValidation.status === "READY" ? "check-circle" : pkgValidation.status === "WARNING" ? "alert-triangle" : "x-circle"}
-                                                            className={`w-5 h-5 text-${sc}-400`} />
-                                                        <span className={`text-sm font-bold text-${sc}-300`}>
-                                                            Status Konfigurasi: {pkgValidation.status}
-                                                        </span>
-                                                    </div>
+                                                {(() => {
+                                                    const packageValidationStatusStyles = {
+                                                        READY: {
+                                                            bg: "bg-emerald-500/10",
+                                                            border: "border-emerald-500/30",
+                                                            text: "text-emerald-300",
+                                                            icon: "text-emerald-400"
+                                                        },
+                                                        WARNING: {
+                                                            bg: "bg-amber-500/10",
+                                                            border: "border-amber-500/30",
+                                                            text: "text-amber-300",
+                                                            icon: "text-amber-400"
+                                                        },
+                                                        NOT_READY: {
+                                                            bg: "bg-rose-500/10",
+                                                            border: "border-rose-500/30",
+                                                            text: "text-rose-300",
+                                                            icon: "text-rose-400"
+                                                        }
+                                                    };
+
+                                                    const packageValidationFallbackStyles = {
+                                                        bg: "bg-slate-500/10",
+                                                        border: "border-slate-500/30",
+                                                        text: "text-slate-300",
+                                                        icon: "text-slate-400"
+                                                    };
+
+                                                    const styles = packageValidationStatusStyles[pkgValidation.status] || packageValidationFallbackStyles;
+
+                                                    return (
+                                                        <div className={styles.bg + " border " + styles.border + " rounded-xl p-4 space-y-3"}>
+                                                            <div className="flex items-center gap-2">
+                                                                <SafeIcon name={pkgValidation.status === "READY" ? "check-circle" : pkgValidation.status === "WARNING" ? "alert-triangle" : "x-circle"}
+                                                                    className={"w-5 h-5 " + styles.icon} />
+                                                                <span className={"text-sm font-bold " + styles.text}>
+                                                                    Status Konfigurasi: {pkgValidation.status}
+                                                                </span>
+                                                            </div>
+                                                    );
+                                                })()}
                                                     {pkgValidation.blockers.length > 0 && (
                                                         <div className="space-y-1">
                                                             <div className="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Blocker</div>
