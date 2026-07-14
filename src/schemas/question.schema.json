@@ -224,7 +224,7 @@
     },
     "reviewStatus": {
       "type": "string",
-      "enum": ["Validated", "Needs Revision", "Approved", "Locked"],
+      "enum": ["Draft", "Validated", "Needs Revision", "Approved", "Locked"],
       "description": "Status review butir soal oleh panitia."
     },
     "reviewerNotes": {

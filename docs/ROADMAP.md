@@ -54,27 +54,61 @@ Setiap tahap dirancang dengan prinsip **Zero-Breakage Guarantee**, di mana fitur
 
 ### MVP 5: Assessment Blueprint Generator
 * **Tujuan**: Menghidupkan generator kisi-kisi soal dan instrumen asesmen interaktif berbasis peramban.
-* **Status**: **ROADMAP (Dalam Perencanaan) — Prototipe Eksperimental**
+* **Status**: **COMPLETED (Selesai)**
 * **Deliverables**:
-  * Berkas `asesmen.html` saat ini berstatus **Experimental Prototype** (belum dihubungkan ke alur ekspor JSON RPP maupun Google Form Builder).
-  * Fitur penyusunan kisi-kisi dan penghitungan bobot ranah kognitif akan diintegrasikan pada tahap berikutnya.
+  * Integrasi penuh `asesmen.html` dengan kisi-kisi dinamis dan penghitungan bobot ranah kognitif secara terintegrasi.
+
+### MVP 6: Parser & Validator UI
+* **Tujuan**: Mengintegrasikan Question Parser dan Question Validator ke dalam antarmuka web.
+* **Status**: **COMPLETED (Selesai)**
+* **Deliverables**:
+  * Form input teks soal dengan parsing dan validasi langsung (error/warning) di browser.
+
+### MVP 7: Review & Approval Workflow
+* **Tujuan**: Alur kerja penelaahan butir soal oleh tim reviewer.
+* **Status**: **COMPLETED (Selesai)**
+* **Deliverables**:
+  * Pilihan set status (Draft, Validated, Approved, Locked) dan catatan koreksi untuk setiap soal di Bank Soal.
+
+### MVP 8: Export Readiness Gate
+* **Tujuan**: Gerbang keamanan sebelum melakukan ekspor instrumen asesmen final.
+* **Status**: **COMPLETED (Selesai)**
+* **Deliverables**:
+  * Kalkulasi nilai kelayakan ekspor berdasarkan komposisi status kunci soal tervalidasi dan kelengkapan meta data.
+
+### MVP 9: Google Form Export Blueprint
+* **Tujuan**: Menyediakan cetak biru skrip otomatisasi untuk Google Form.
+* **Status**: **COMPLETED (Selesai)**
+* **Deliverables**:
+  * Fitur ekspor berkas kuis khusus untuk parser GAS Google Form.
+
+### MVP 10: Advanced Question Type Schema
+* **Tujuan**: Mendukung keragaman tipe soal lanjut dalam data model.
+* **Status**: **COMPLETED (Selesai)**
+* **Deliverables**:
+  * Skema terstruktur untuk tipe pilihan ganda kompleks, menjodohkan, isian singkat, dan tabel pernyataan.
+
+### MVP 11: Question Bank Manager & Duplicate Filter
+* **Tujuan**: Pengelolaan koleksi soal dengan filter duplikasi otomatis.
+* **Status**: **COMPLETED (Selesai)**
+* **Deliverables**:
+  * Pencarian soal, pengarsipan, dan deteksi otomatis soal duplikat menggunakan kemiripan teks Jaccard.
+
+### MVP 12: Assessment Package Configuration
+* **Tujuan**: Konfigurasi paket asesmen multi-materi / multi-TP.
+* **Status**: **COMPLETED (Selesai)**
+* **Deliverables**:
+  * Panel pembobotan blueprint dan auto-balance bobot/jumlah soal.
+
+### MVP 13: Controlled Random Builder
+* **Tujuan**: Pembangun paket soal acak terkontrol berdasarkan blueprint.
+* **Status**: **COMPLETED (Selesai)**
+* **Deliverables**:
+  * Algoritma seleksi acak otomatis bebas duplikat dan UI modal untuk swap/override manual soal terpilih.
 
 ---
 
-## 🚀 Fase Advanced (V2 – V6): AI Intelligence & Cloud Automation
-
-### V2: Question Parser Module
-* **Tujuan**: Mengembangkan modul pembaca teks cerdas untuk mengonversi draf soal mentah menjadi JSON terstruktur.
-* **Status**: **COMPLETED (Selesai — Standalone Prototype)**
-* **Deliverables**:
-  * Modul mandiri `src/engines/questionParserEngine.js` dengan fungsi `parseQuestionsFromText` *(belum dihubungkan ke UI)*.
-  * Berkas sampel uji `src/engines/questionParserEngine.test-samples.md`.
-
-### V3: Question Validator Engine
-* **Tujuan**: Menyediakan sistem penjamin mutu soal sebelum didistribusikan kepada peserta didik.
-* **Status**: **COMPLETED (Selesai — Standalone Prototype)**
-* **Deliverables**:
-  * Modul mandiri `src/engines/questionValidatorEngine.js` dengan fungsi `validateQuestion` dan `validateQuestionSet` *(belum dihubungkan ke UI)*.
+## 🚀 Fase Advanced (V4 – V6): AI Intelligence & Cloud Automation
 
 ### V4: Google Form Builder via GAS
 * **Tujuan**: Otomatisasi pembuatan instrumen ujian online di Google Forms langsung dari browser via Google Apps Script (GAS).
@@ -105,9 +139,15 @@ Setiap tahap dirancang dengan prinsip **Zero-Breakage Guarantee**, di mana fitur
 | **MVP 2** | Zero-Build Modularization | Q3 2026 | **COMPLETED (Reference Modules)** |
 | **MVP 3** | JSON Schemas Implementation | Q3 2026 | **COMPLETED** |
 | **MVP 4** | RPP Planning Data Export | Q3 2026 | **COMPLETED** |
-| **MVP 5** | Blueprint & Question Generator | Q4 2026 | **ROADMAP (Experimental Prototype)** |
-| **V2** | Question Parser Module | Q4 2026 | **COMPLETED (Standalone Prototype)** |
-| **V3** | Question Validator Engine | Q4 2026 | **COMPLETED (Standalone Prototype)** |
+| **MVP 5** | Blueprint & Question Generator | Q4 2026 | **COMPLETED** |
+| **MVP 6** | Parser & Validator UI | Q4 2026 | **COMPLETED** |
+| **MVP 7** | Review & Approval Workflow | Q4 2026 | **COMPLETED** |
+| **MVP 8** | Export Readiness Gate | Q4 2026 | **COMPLETED** |
+| **MVP 9** | Google Form Export Blueprint | Q4 2026 | **COMPLETED** |
+| **MVP 10** | Advanced Question Type Schema | Q4 2026 | **COMPLETED** |
+| **MVP 11** | Question Bank Manager & Dup Filter | Q4 2026 | **COMPLETED** |
+| **MVP 12** | Assessment Package Configuration | Q4 2026 | **COMPLETED** |
+| **MVP 13** | Controlled Random Builder | Q4 2026 | **COMPLETED** |
 | **V4** | Google Form Builder via GAS | Q1 2027 | **ROADMAP** |
 | **V5** | Automated Drive Organizer | Q1 2027 | **ROADMAP** |
 | **V6** | Accreditation Evidence Mapper | Q2 2027 | **ROADMAP** |

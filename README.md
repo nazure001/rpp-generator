@@ -6,16 +6,17 @@ Saat ini, proyek ini sedang bertransisi dan berevolusi menuju ekosistem **Assess
 
 ---
 
-## 📊 Status Saat Ini (*Current Status*)
+### 📊 Status Saat Ini (*Current Status*)
 
-- **🟢 Produksi (Aktif & Stabil)**: Aplikasi generator RPP statis berbasis web (`index.html`) berfungsi penuh untuk merancang RPP 5 langkah, mendukung cetak A4 (*print-ready*), serta dilengkapi fitur ekspor data JSON (*Export JSON RPP* & *Export Draft Asesmen*).
-- **🟡 Fondasi Arsitektur (*MVP 1 - MVP 3*)**: Skema standar data (*JSON Schema*), dokumentasi arsitektur, dan ekstraksi modul mesin pembantu (*engines*) telah disiapkan di dalam repositori.
-- **🔵 Prototipe Mandiri (*V2 - V3*)**: Parser and validator are available as standalone prototypes and require further integration testing.
-- **🟣 Dalam Perencanaan (*Roadmap / Planned*)**: Integrasi Google Form otomatis, organisasi Google Drive, dan pemetaan bukti akreditasi sedang dalam tahap rancangan jalan (*roadmap*).
+- **🟢 Produksi (Aktif & Stabil)**: 
+  - **RPP Generator (`index.html`)**: Aplikasi generator RPP statis berbasis web berfungsi penuh untuk merancang RPP 5 langkah, mendukung cetak A4 (*print-ready*), serta dilengkapi fitur ekspor data JSON.
+  - **AssessmentHub AI (`asesmen.html`)**: Kini aktif penuh hingga **MVP 13 (Controlled Random Builder)**. Mendukung blueprint dinamis, parsing/validasi butir soal, workflow persetujuan, manajemen bank soal dengan duplicate filtering, konfigurasi paket asesmen paralel, serta pengacakan soal cerdas dan swap manual.
+- **🔵 Fondasi Arsitektur (*MVP 1 - MVP 3*)**: Skema standar data (*JSON Schema*), dokumentasi arsitektur, dan ekstraksi modul mesin pembantu (*engines*) telah disiapkan di dalam repositori.
+- **🟣 Dalam Perencanaan (*Roadmap / Planned*)**: Integrasi Google Form kuis otomatis, organisasi Google Drive, dan pemetaan bukti akreditasi sedang dalam tahap rancangan jalan (*roadmap*).
 
 ---
 
-## 🚀 Fitur Eksisting RPP Generator (*Existing Features*)
+## 🚀 Fitur Eksisting RPP Generator & AssessmentHub (*Existing Features*)
 
 Aplikasi utama yang saat ini dapat langsung digunakan memiliki fitur unggulan sebagai berikut:
 
@@ -23,9 +24,10 @@ Aplikasi utama yang saat ini dapat langsung digunakan memiliki fitur unggulan se
 - **Smart Engine Logic**: Menghasilkan tujuan pembelajaran, langkah-langkah kegiatan, dan instrumen asesmen secara kontekstual hanya dengan memasukkan topik materi.
 - **18+ Model Pembelajaran**: Mendukung berbagai model mulai dari PBL, PjBL, Discovery Learning, hingga Game-Based Learning.
 - **Asesmen Komprehensif**: Pembuatan instrumen diagnostik, formatif (rubrik observasi), dan sumatif secara otomatis.
-- **Ekspor Data Non-Destruktif**: Kemampuan mengunduh hasil rancangan ke dalam format berkas `lesson-plan-*.json` dan `assessment-draft-*.json` untuk diolah di sistem lain.
+- **Question Bank Manager & Duplicate Filter**: Melacak duplikasi soal di bank menggunakan kemiripan Jaccard, dengan dukungan persetujuan/koreksi soal terstruktur.
+- **Controlled Randomizer & Overrides**: Mengacak seleksi soal dari bank secara otomatis sesuai kriteria blueprint dan memungkinkan guru menukar soal (swap) dengan kandidat pengganti.
+- **Ekspor Data Non-Destruktif**: Kemampuan mengunduh hasil rancangan ke dalam format berkas JSON standar.
 - **Siap Cetak (Print-Ready)**: Output dokumen terformat standar A4 yang rapi untuk kebutuhan administrasi sekolah.
-- **UI/UX Modern**: Antarmuka berbasis *Glassmorphism* yang responsif dan nyaman di mata (*Dark Mode*).
 
 ---
 
@@ -44,15 +46,14 @@ Beberapa modul utama yang menyusun arsitektur AssessmentHub AI dibagi ke dalam s
 | Modul | Status | Deskripsi |
 | :--- | :--- | :--- |
 | **1. Planning Engine** | 🟢 **Selesai (Aktif)** | Mesin inti penyusun RPP dan skenario pembelajaran kontekstual berbasis Kurikulum Merdeka dan PMM. |
-| **2. Question Parser** | 🔵 **Prototipe Selesai** | Modul mandiri (`questionParserEngine.js`) untuk memotong teks mentah soal menjadi struktur JSON berlabel (stimulus, pertanyaan, opsi A-E, dan kunci jawaban). *(Belum dihubungkan ke UI)*. |
-| **3. Question Validator** | 🔵 **Prototipe Selesai** | Modul mandiri (`questionValidatorEngine.js`) untuk mengevaluasi keabsahan struktur soal (minimal 4 opsi, kesesuaian kunci, validitas ranah kognitif C1-C6, dan indikator). *(Belum dihubungkan ke UI)*. |
-| **4. Assessment Generator** | 🟣 **Roadmap** | Mesin perumus kisi-kisi (*blueprint*) dan paket soal asesmen secara otomatis dari draft RPP. |
+| **2. Question Parser** | 🟢 **Selesai (Aktif)** | Terintegrasi di UI `asesmen.html` untuk memotong teks mentah soal menjadi struktur JSON berlabel (stimulus, pertanyaan, opsi A-E, dan kunci jawaban). |
+| **3. Question Validator** | 🟢 **Selesai (Aktif)** | Terintegrasi di UI `asesmen.html` untuk mengevaluasi keabsahan struktur soal (minimal 4 opsi, kesesuaian kunci, validitas ranah kognitif C1-C6, dan indikator). |
+| **4. Assessment Generator** | 🟢 **Selesai (Aktif)** | Mesin perumus kisi-kisi (*blueprint*), bank soal kognitif, duplicate checker, konfigurasi paket, dan controlled random builder. |
 | **5. Google Form Builder** | 🟣 **Roadmap** | Integrasi berbasis Google Apps Script (GAS) untuk mengubah paket soal JSON menjadi form kuis online secara instan. |
 | **6. Drive Organizer** | 🟣 **Roadmap** | Penataan folder otomatis di Google Drive untuk mengarsip RPP, paket soal, rekap nilai, dan bukti kinerja guru. |
 | **7. Evidence Mapper** | 🟣 **Roadmap** | Pemetaan otomatis hasil asesmen dan dokumen pembelajaran ke dalam borang bukti akreditasi dan laporan PMM. |
 
-> [!IMPORTANT]
-> Fitur berlabel **Roadmap / Prototipe** sedang dalam pengembangan aktif dan belum diaktifkan pada antarmuka pengguna UI (`index.html`) untuk menjaga stabilitas produksi.
+> Fitur berlabel **Roadmap** sedang dalam pengembangan aktif dan belum diintegrasikan ke Google Workspace untuk menjaga stabilitas produksi offline-first.
 
 ---
 
@@ -78,8 +79,8 @@ Pengembangan AssessmentHub AI dilakukan secara bertahap dengan prinsip *zero-reg
 - **Fase 0 (MVP 0 - Selesai)**: Audit keselamatan repositori dan isolasi *branch* pengembangan (`feature/assessmenthub-foundation`).
 - **Fase 1 (MVP 1 & 2 - Selesai)**: Strukturisasi dokumentasi arsitektur (`docs/`) dan modularisasi logika eksisting ke folder `src/engines/`.
 - **Fase 2 (MVP 3 & 4 - Selesai)**: Pembuatan standar *JSON Schema* (`src/schemas/`) serta fitur ekspor JSON RPP dan Draft Asesmen.
-- **Fase 3 (V2 & V3 - Prototipe Selesai)**: Pembangunan modul mandiri *Question Parser* dan *Question Validator*.
-- **Fase 4 (MVP 5 - Roadmap)**: Implementasi mesin *Assessment Blueprint Generator* dan antarmuka kelola asesmen.
+- **Fase 3 (MVP 5 - MVP 11 - Selesai)**: Integrasi modul *Question Parser & Validator UI*, workflow tinjauan & persetujuan, readiness gate kelayakan ekspor, skema tipe soal tingkat lanjut, dan manajemen Bank Soal dengan filter duplikasi kemiripan teks Jaccard.
+- **Fase 4 (MVP 12 & MVP 13 - Selesai)**: Implementasi konfigurasi Paket Asesmen paralel serta algoritma *Controlled Random Builder* dengan antarmuka manual swap/override soal.
 - **Fase 5 (V4 & V5 - Roadmap)**: Integrasi *Google Apps Script (GAS)* untuk otomatisasi *Google Form Builder* dan *Drive Organizer*.
 - **Fase 6 (V6 - Roadmap)**: Implementasi *Evidence / Accreditation Mapper* untuk pelaporan sekolah.
 
