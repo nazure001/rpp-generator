@@ -431,6 +431,8 @@
             const [blueprintRows, setBlueprintRows] = useState([]);
             const [packageValidation, setPackageValidation] = useState(null);
             const [showPackageConfig, setShowPackageConfig] = useState(false);
+            const [selectedQuestions, setSelectedQuestions] = useState([]);
+            const [swappingSlot, setSwappingSlot] = useState(null);
 
             const calculateSimilarity = (str1, str2) => {
                 const getTokens = (str) => {
@@ -759,22 +761,24 @@
 
             // --- MVP 9: Google Form Export Blueprint Helpers ---
             const buildGoogleFormBlueprint = () => {
-                const list = Array.isArray(bankSoalQuestions) && bankSoalQuestions.length > 0
-                    ? bankSoalQuestions
-                    : (Array.isArray(formData.soalPG) ? formData.soalPG.map(q => ({
-                        id: generateUUID(),
-                        number: q.no,
-                        questionText: q.soal,
-                        options: typeof q.opsi === 'object' && q.opsi !== null
-                            ? Object.entries(q.opsi).map(([k, v]) => ({ key: k, text: v }))
-                            : [],
-                        answerKey: q.kunci,
-                        explanation: q.pembahasan,
-                        cognitiveLevel: formData.bloom || "C4",
-                        indicator: "",
-                        reviewStatus: "Validated",
-                        score: 1
-                      })) : []);
+                const list = Array.isArray(selectedQuestions) && selectedQuestions.length > 0
+                    ? selectedQuestions
+                    : (Array.isArray(bankSoalQuestions) && bankSoalQuestions.length > 0
+                        ? bankSoalQuestions
+                        : (Array.isArray(formData.soalPG) ? formData.soalPG.map(q => ({
+                            id: generateUUID(),
+                            number: q.no,
+                            questionText: q.soal,
+                            options: typeof q.opsi === 'object' && q.opsi !== null
+                                ? Object.entries(q.opsi).map(([k, v]) => ({ key: k, text: v }))
+                                : [],
+                            answerKey: q.kunci,
+                            explanation: q.pembahasan,
+                            cognitiveLevel: formData.bloom || "C4",
+                            indicator: "",
+                            reviewStatus: "Validated",
+                            score: 1
+                          })) : []));
 
                 const metaSchool = formData.sekolah || (importedDraft && importedDraft.metadata && importedDraft.metadata.school) || "";
                 const metaSubject = selectedMapel || (importedDraft && importedDraft.metadata && importedDraft.metadata.subject) || "";
@@ -1501,6 +1505,101 @@
                 }
             }, [showPackageConfig, selectedMapel, selectedFase, formData.kelas, formData.semester, formData.topik]);
 
+            // --- MVP 13: Controlled Random Builder Helpers ---
+            const getBlueprintRowCandidates = (row, bankSoalQuestions) => {
+                const active = (Array.isArray(bankSoalQuestions) ? bankSoalQuestions : []).filter(q =>
+                    q.bankStatus !== "archived" && q.bankStatus !== "rejected_duplicate"
+                );
+                const matchTopic = (q) => {
+                    const target = (row.topic || row.material || "").toLowerCase().trim();
+                    if (!target) return true;
+                    const qTopic = ((q.topic || q.material || q.chapter || "") + " " + (q.questionText || "")).toLowerCase();
+                    return qTopic.includes(target);
+                };
+                const matchType = (q) => row.questionType === "any" || !row.questionType ||
+                    normalizeAdvancedQuestionType(q.questionType || q.type || "") === normalizeAdvancedQuestionType(row.questionType);
+                const matchLevel = (q) => row.cognitiveLevel === "any" || !row.cognitiveLevel ||
+                    (q.cognitiveLevel || "").toUpperCase().startsWith(row.cognitiveLevel.toUpperCase());
+                const matchDiff = (q) => {
+                    if (row.difficultyTarget === "any" || !row.difficultyTarget) return true;
+                    const qDiff = q.difficultyTarget || q.difficulty || q.difficultyLevel || "Medium";
+                    return qDiff.toLowerCase() === row.difficultyTarget.toLowerCase();
+                };
+                return active.filter(q => matchTopic(q) && matchType(q) && matchLevel(q) && matchDiff(q));
+            };
+
+            const handleBuildControlledRandomPackage = () => {
+                const validation = validateAssessmentPackageConfig(assessmentPackageConfig, blueprintRows, bankSoalQuestions);
+                if (validation.blockers.length > 0) {
+                    alert("Gagal membangun paket. Selesaikan blocker konfigurasi terlebih dahulu:\n- " + validation.blockers.join("\n- "));
+                    return;
+                }
+
+                const selection = [];
+                const usedQuestionIds = new Set();
+                const warnings = [];
+
+                blueprintRows.forEach((row, ri) => {
+                    const reqCount = parseInt(row.questionCount) || 0;
+                    if (reqCount <= 0) return;
+
+                    let candidates = getBlueprintRowCandidates(row, bankSoalQuestions);
+                    if (row.requiredLockedOnly) {
+                        candidates = candidates.filter(c => c.reviewStatus === "Locked");
+                    }
+
+                    // Exclude already selected
+                    const availableCandidates = candidates.filter(c => !usedQuestionIds.has(c.questionId || c.id));
+
+                    if (availableCandidates.length < reqCount) {
+                        warnings.push(`Baris ${ri + 1}: Hanya mendapatkan ${availableCandidates.length} dari ${reqCount} soal yang diminta.`);
+                        availableCandidates.forEach(c => {
+                            usedQuestionIds.add(c.questionId || c.id);
+                            selection.push({
+                                ...c,
+                                blueprintRowId: row.id
+                            });
+                        });
+                    } else {
+                        // Shuffle candidates
+                        const shuffled = [...availableCandidates].sort(() => Math.random() - 0.5);
+                        const chosen = shuffled.slice(0, reqCount);
+                        chosen.forEach(c => {
+                            usedQuestionIds.add(c.questionId || c.id);
+                            selection.push({
+                                ...c,
+                                blueprintRowId: row.id
+                            });
+                        });
+                    }
+                });
+
+                setSelectedQuestions(selection);
+
+                if (warnings.length > 0) {
+                    alert("Paket berhasil dibangun dengan beberapa peringatan:\n" + warnings.join("\n"));
+                } else {
+                    alert(`Sukses! ${selection.length} soal berhasil diacak dan dimasukkan ke dalam Paket Asesmen.`);
+                }
+            };
+
+            const handleSwapQuestion = (rowId, oldQId, newQId) => {
+                const newQuestion = bankSoalQuestions.find(q => (q.questionId || q.id) === newQId);
+                if (!newQuestion) return;
+
+                setSelectedQuestions(prev => prev.map(q => {
+                    const currentId = q.questionId || q.id;
+                    if (q.blueprintRowId === rowId && currentId === oldQId) {
+                        return {
+                            ...newQuestion,
+                            blueprintRowId: rowId
+                        };
+                    }
+                    return q;
+                }));
+                setSwappingSlot(null);
+            };
+
 
             // --- MVP 6: Parser Event Handlers ---
             const handleParseQuestions = () => {
@@ -2078,6 +2177,8 @@
                     if (!proceed) return;
                 }
 
+                const exportSourceList = Array.isArray(selectedQuestions) && selectedQuestions.length > 0 ? selectedQuestions : bankSoalQuestions;
+
                 const mapQuestionValidationStatus = (status) => {
                     if (status === "VALID" || status === "WARNING") return "Valid";
                     if (status === "ERROR") return "Revision Required";
@@ -2161,8 +2262,8 @@
                         weight: Number(String(item.weight || item.bobot || "20").replace(/[^0-9]/g, "")) || 20,
                         estimatedQuestionCount: item.estimatedQuestionCount || (String(item.questionType || item.bentuk).toLowerCase().includes("uraian") ? 1 : 2)
                     })),
-                    questions: bankSoalQuestions.length > 0
-                        ? bankSoalQuestions.map((q, idx) => {
+                    questions: exportSourceList.length > 0
+                        ? exportSourceList.map((q, idx) => {
                             const normalized = normalizeQuestionForAdvancedSchema(q, idx);
                             return {
                                 ...normalized,
@@ -2216,8 +2317,8 @@
                             };
                         })
                     ],
-                    answerKey: bankSoalQuestions.length > 0
-                        ? bankSoalQuestions.map(q => ({ number: q.number, answer: q.answerKey, explanation: q.explanation || "" }))
+                    answerKey: exportSourceList.length > 0
+                        ? exportSourceList.map((q, idx) => ({ number: q.number || idx + 1, answer: q.answerKey, explanation: q.explanation || "" }))
                         : importedDraft ? [] : [
                         ...formData.soalPG.map(q => ({
                             number: q.no,
@@ -2240,7 +2341,7 @@
                         ...(importedDraft && importedDraft.validationReport ? importedDraft.validationReport : {}),
                         status: "VALIDATED",
                         isValidated: true,
-                        bloomDistribution: bankSoalQuestions.reduce((acc, q) => {
+                        bloomDistribution: exportSourceList.reduce((acc, q) => {
                             const lvl = (q.cognitiveLevel || "unknown").substring(0, 2).toUpperCase();
                             acc[lvl] = (acc[lvl] || 0) + 1;
                             return acc;
@@ -2248,12 +2349,12 @@
                         warnings: []
                     },
                     reviewReport: {
-                        totalQuestions: bankSoalQuestions.length > 0 ? getReviewSummary(bankSoalQuestions).total : (formData.soalPG.length + formData.soalUraian.length),
-                        validated: bankSoalQuestions.length > 0 ? getReviewSummary(bankSoalQuestions).validated : (formData.soalPG.length + formData.soalUraian.length),
-                        needsRevision: bankSoalQuestions.length > 0 ? getReviewSummary(bankSoalQuestions).needsRevision : 0,
-                        approved: bankSoalQuestions.length > 0 ? getReviewSummary(bankSoalQuestions).approved : 0,
-                        locked: bankSoalQuestions.length > 0 ? getReviewSummary(bankSoalQuestions).locked : 0,
-                        isReadyForFinalExport: bankSoalQuestions.length > 0 ? getReviewSummary(bankSoalQuestions).isReady : false
+                        totalQuestions: exportSourceList.length > 0 ? getReviewSummary(exportSourceList).total : (formData.soalPG.length + formData.soalUraian.length),
+                        validated: exportSourceList.length > 0 ? getReviewSummary(exportSourceList).validated : (formData.soalPG.length + formData.soalUraian.length),
+                        needsRevision: exportSourceList.length > 0 ? getReviewSummary(exportSourceList).needsRevision : 0,
+                        approved: exportSourceList.length > 0 ? getReviewSummary(exportSourceList).approved : 0,
+                        locked: exportSourceList.length > 0 ? getReviewSummary(exportSourceList).locked : 0,
+                        isReadyForFinalExport: exportSourceList.length > 0 ? getReviewSummary(exportSourceList).isReady : false
                     },
                     exportReadiness: {
                         status: readiness.status,
@@ -3719,6 +3820,97 @@
                                                     </button>
                                                 </div>
 
+                                                {/* E. MVP 13: CONTROLLED RANDOM BUILDER CONTROLS & SELECTION LIST */}
+                                                <div className="mt-6 pt-6 border-t border-white/10 space-y-4">
+                                                    <div className="flex items-center justify-between flex-wrap gap-4">
+                                                        <div>
+                                                            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                                                                <SafeIcon name="shuffle" className="w-4 h-4 text-violet-400" />
+                                                                Controlled Random Builder (MVP 13)
+                                                            </h4>
+                                                            <p className="text-xs text-slate-400 mt-1">
+                                                                Pilih secara acak terkontrol soal dari Bank Soal sesuai matriks blueprint di atas.
+                                                            </p>
+                                                        </div>
+                                                        <button
+                                                            onClick={handleBuildControlledRandomPackage}
+                                                            className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-violet-600/20 transition-all active:scale-[0.98]"
+                                                        >
+                                                            <SafeIcon name="shuffle" className="w-4 h-4" />
+                                                            <span>Acak & Bangun Paket Soal</span>
+                                                        </button>
+                                                    </div>
+
+                                                    {selectedQuestions.length > 0 ? (
+                                                        <div className="space-y-4">
+                                                            <div className="flex items-center justify-between text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-xl">
+                                                                <span className="flex items-center gap-1.5">
+                                                                    <SafeIcon name="check" className="w-4 h-4" />
+                                                                    Paket Soal Terpilih Berhasil Dihasilkan! ({selectedQuestions.length} Soal)
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => setSelectedQuestions([])}
+                                                                    className="text-slate-400 hover:text-white transition-colors"
+                                                                >
+                                                                    Reset
+                                                                </button>
+                                                            </div>
+
+                                                            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                                                                {blueprintRows.map((row, ri) => {
+                                                                    const rowQs = selectedQuestions.filter(q => q.blueprintRowId === row.id);
+                                                                    return (
+                                                                        <div key={row.id} className="bg-slate-950/40 border border-white/5 rounded-xl p-3.5 space-y-2">
+                                                                            <div className="flex items-center justify-between text-xs border-b border-white/5 pb-2">
+                                                                                <span className="font-bold text-slate-300">
+                                                                                    Baris {ri + 1}: {row.topic || "Semua Topik"} ({rowQs.length} / {row.questionCount} Soal)
+                                                                                </span>
+                                                                                <span className="text-slate-400 bg-white/5 px-2 py-0.5 rounded text-[10px]">
+                                                                                    {row.questionType === "any" ? "Semua Tipe" : row.questionType} | {row.cognitiveLevel === "any" ? "Semua Level" : row.cognitiveLevel} | {row.difficultyTarget || "Medium"}
+                                                                                </span>
+                                                                            </div>
+
+                                                                            <div className="space-y-2">
+                                                                                {rowQs.map((q, idx) => (
+                                                                                    <div key={q.questionId || q.id} className="flex items-start justify-between gap-3 bg-white/5 border border-white/5 rounded-lg p-2.5 hover:border-violet-500/30 transition-all">
+                                                                                        <div className="space-y-1">
+                                                                                            <p className="text-xs text-slate-200 line-clamp-2">
+                                                                                                {idx + 1}. {q.questionText}
+                                                                                            </p>
+                                                                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                                                                <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-mono">
+                                                                                                    {normalizeAdvancedQuestionType(q.questionType || q.type) === "multiple_choice" ? "PG" : "Esai"}
+                                                                                                </span>
+                                                                                                <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-mono">
+                                                                                                    {q.cognitiveLevel || "C3"}
+                                                                                                </span>
+                                                                                                <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-mono">
+                                                                                                    {q.difficultyTarget || q.difficulty || "Medium"}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <button
+                                                                                            onClick={() => setSwappingSlot({ rowId: row.id, oldQuestionId: q.questionId || q.id })}
+                                                                                            className="text-[10px] text-violet-400 bg-violet-500/10 hover:bg-violet-500/20 px-2 py-1 rounded transition-colors shrink-0"
+                                                                                        >
+                                                                                            Ganti Soal
+                                                                                        </button>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="bg-slate-950/20 border border-dashed border-white/10 rounded-xl p-6 text-center text-xs text-slate-400">
+                                                            <SafeIcon name="info" className="w-5 h-5 mx-auto mb-2 text-slate-500" />
+                                                            Belum ada soal terpilih. Silakan klik tombol "Acak & Bangun Paket Soal" di atas untuk menyeleksi soal secara otomatis.
+                                                        </div>
+                                                    )}
+                                                </div>
+
                                             </div>
                                         );
                                     })()}
@@ -3783,8 +3975,29 @@
                         )}
 
                         {/* TAHAP 5: PRATINJAU SIAP CETAK (PRINT-READY) */}
-                        {step === 5 && (
-                            <div className="space-y-8 animate-fade-in">
+                        {step === 5 && (() => {
+                            const printPG = Array.isArray(selectedQuestions) && selectedQuestions.length > 0
+                                ? selectedQuestions.filter(q => normalizeAdvancedQuestionType(q.questionType || q.type) === "multiple_choice").map((q, idx) => ({
+                                    no: idx + 1,
+                                    soal: q.questionText,
+                                    opsi: Array.isArray(q.options) ? q.options.map(o => `${o.key}. ${o.text}`) : [],
+                                    kunci: q.answerKey,
+                                    pembahasan: q.explanation
+                                }))
+                                : formData.soalPG;
+
+                            const printUraian = Array.isArray(selectedQuestions) && selectedQuestions.length > 0
+                                ? selectedQuestions.filter(q => normalizeAdvancedQuestionType(q.questionType || q.type) === "essay").map((q, idx) => ({
+                                    no: idx + 1,
+                                    soal: q.questionText,
+                                    level: q.cognitiveLevel,
+                                    skorMaks: q.score || 10,
+                                    rambu: q.explanation || ""
+                                }))
+                                : formData.soalUraian;
+
+                            return (
+                                <div className="space-y-8 animate-fade-in">
                                 <div className="glass-panel p-6 rounded-2xl flex items-center justify-between no-print border border-emerald-500/30 bg-emerald-950/20 flex-wrap gap-4">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">A4</div>
@@ -3953,9 +4166,11 @@
 
                                 {/* KAPABILITAS TIPE SOAL PANEL */}
                                 {(() => {
-                                    const list = Array.isArray(bankSoalQuestions) && bankSoalQuestions.length > 0
-                                        ? bankSoalQuestions
-                                        : (Array.isArray(formData.soalPG) ? formData.soalPG.map(q => ({ type: "multiple_choice" })) : []);
+                                    const list = Array.isArray(selectedQuestions) && selectedQuestions.length > 0
+                                        ? selectedQuestions
+                                        : (Array.isArray(bankSoalQuestions) && bankSoalQuestions.length > 0
+                                            ? bankSoalQuestions
+                                            : (Array.isArray(formData.soalPG) ? formData.soalPG.map(q => ({ type: "multiple_choice" })) : []));
 
                                     const normalizedList = list.map((q, idx) => normalizeQuestionForAdvancedSchema(q, idx));
 
@@ -4115,7 +4330,7 @@
                                     <div className="mb-8">
                                         <div className="font-bold bg-slate-100 p-1.5 mb-3 uppercase border border-black text-[12px]">II. INSTRUMEN SOAL PILIHAN GANDA (PILIH SATU JAWABAN BENAR)</div>
                                         <div className="space-y-4">
-                                            {formData.soalPG.map((item, idx) => (
+                                            {printPG.map((item, idx) => (
                                                 <div key={idx} className="page-break-inside-avoid">
                                                     <p className="font-semibold">{item.no}. {item.soal}</p>
                                                     <div className="grid grid-cols-1 gap-1 pl-4 mt-1">
@@ -4157,7 +4372,7 @@
                                     <div className="mb-8">
                                         <div className="font-bold bg-slate-100 p-1.5 mb-3 uppercase border border-black text-[12px]">III. SOAL URAIAN (ESAI HOTS) & PEDOMAN PENSKORAN</div>
                                         <div className="space-y-5">
-                                            {formData.soalUraian.map((item, idx) => (
+                                            {printUraian.map((item, idx) => (
                                                 <div key={idx} className="page-break-inside-avoid border-b border-gray-300 pb-4">
                                                     <div className="flex justify-between font-bold">
                                                         <span>{item.no}. [{item.level}]</span>
@@ -4185,7 +4400,7 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {formData.soalPG.map((item, idx) => (
+                                                {printPG.map((item, idx) => (
                                                     <tr key={idx}>
                                                         <td className="border border-black p-2 text-center font-bold">{item.no}</td>
                                                         <td className="border border-black p-2 text-center font-bold text-emerald-800">{item.kunci}</td>
@@ -4244,9 +4459,119 @@
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
                     </main>
+
+                    {/* SWAP QUESTION SELECTOR MODAL (MVP 13) */}
+                    {swappingSlot && (() => {
+                        const targetRow = blueprintRows.find(r => r.id === swappingSlot.rowId);
+                        if (!targetRow) return null;
+
+                        const candidates = getBlueprintRowCandidates(targetRow, bankSoalQuestions);
+                        // Filter out already selected in selectedQuestions to prevent duplication
+                        const currentSelectionIds = new Set(selectedQuestions.map(q => q.questionId || q.id));
+                        const filteredCandidates = candidates.filter(c => {
+                            const cid = c.questionId || c.id;
+                            return cid === swappingSlot.oldQuestionId || !currentSelectionIds.has(cid);
+                        });
+
+                        return (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 no-print">
+                                <div className="bg-slate-900 border border-white/10 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+                                    <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+                                        <div>
+                                            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                                                <SafeIcon name="refresh-cw" className="w-4 h-4 text-violet-400" />
+                                                Pilih Soal Pengganti
+                                            </h3>
+                                            <p className="text-[10px] text-slate-400 mt-0.5">
+                                                Menampilkan kandidat yang memenuhi kriteria blueprint baris ini.
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => setSwappingSlot(null)}
+                                            className="text-slate-400 hover:text-white transition-colors"
+                                        >
+                                            <SafeIcon name="x" className="w-4 h-4" />
+                                        </button>
+                                    </div>
+
+                                    <div className="p-4 bg-slate-950/30 text-xs border-b border-white/5 space-y-1">
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Kriteria Baris:</div>
+                                        <div className="flex flex-wrap gap-2 text-slate-300">
+                                            <span>Materi: <strong>{targetRow.topic || "Semua"}</strong></span>
+                                            <span>Tipe: <strong>{targetRow.questionType}</strong></span>
+                                            <span>Level: <strong>{targetRow.cognitiveLevel}</strong></span>
+                                            <span>Kesulitan: <strong>{targetRow.difficultyTarget || "Medium"}</strong></span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 overflow-y-auto p-6 space-y-3">
+                                        {filteredCandidates.length > 0 ? (
+                                            filteredCandidates.map((c) => {
+                                                const cid = c.questionId || c.id;
+                                                const isCurrent = cid === swappingSlot.oldQuestionId;
+                                                return (
+                                                    <div
+                                                        key={cid}
+                                                        className={"border rounded-xl p-3.5 space-y-2 transition-all flex flex-col justify-between md:flex-row md:items-center gap-3 " +
+                                                            (isCurrent ? "border-violet-500/50 bg-violet-500/5" : "border-white/5 bg-white/5 hover:border-white/15")
+                                                        }
+                                                    >
+                                                        <div className="space-y-1.5 flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[9px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono">
+                                                                    {c.cognitiveLevel || "C3"}
+                                                                </span>
+                                                                <span className="text-[9px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono">
+                                                                    {c.difficultyTarget || c.difficulty || "Medium"}
+                                                                </span>
+                                                                {isCurrent && (
+                                                                    <span className="text-[9px] bg-violet-500/20 text-violet-300 px-1.5 py-0.5 rounded font-bold">
+                                                                        Sedang Terpilih
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-xs text-slate-200 leading-relaxed font-sans">{c.questionText}</p>
+                                                            {c.answerKey && (
+                                                                <div className="text-[11px] text-emerald-400 font-medium">
+                                                                    Kunci: {c.answerKey}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {!isCurrent && (
+                                                            <button
+                                                                onClick={() => handleSwapQuestion(swappingSlot.rowId, swappingSlot.oldQuestionId, cid)}
+                                                                className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-lg shadow-emerald-600/10 shrink-0 self-end md:self-center"
+                                                            >
+                                                                <SafeIcon name="check" className="w-3.5 h-3.5" />
+                                                                Pilih Soal
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })
+                                        ) : (
+                                            <div className="text-center py-10 text-xs text-slate-500">
+                                                Tidak ada kandidat lain yang cocok di Bank Soal.
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="px-6 py-4 border-t border-white/5 flex justify-end">
+                                        <button
+                                            onClick={() => setSwappingSlot(null)}
+                                            className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-colors"
+                                        >
+                                            Batal
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* FLOATING AUTHOR SIGNATURE */}
                     <div className="fixed bottom-6 right-6 z-50 no-print group">
