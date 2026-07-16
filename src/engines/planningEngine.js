@@ -83,13 +83,18 @@ export const SmartEngine = {
         const m = mapel || "[Mapel]";
         const mod = getModelData(metode);
 
-        const soalAwal = `PERTANYAAN DIAGNOSTIK:\n1. Tuliskan apa yang kamu pahami tentang materi "${t}" pada pelajaran ${m}?\n2. Berikan contoh nyata relevansi "${t}" dalam kehidupan sehari-hari!`;
+        let soalAwal = `PERTANYAAN DIAGNOSTIK:\n1. Tuliskan apa yang kamu pahami tentang materi "${t}" pada pelajaran ${m}?\n2. Berikan contoh nyata relevansi "${t}" dalam kehidupan sehari-hari!`;
+        if (metode === "STEM (Engineering Design Process)") {
+            soalAwal = `ASESMEN DIAGNOSTIK 4-DOMAIN STEM:\n1. [Science]: Apa konsep sains utama yang mendasari fenomena "${t}"?\n2. [Technology]: Teknologi atau alat bantu apa yang paling relevan untuk meneliti/menguji "${t}"?\n3. [Engineering]: Masalah teknis apa yang biasanya muncul saat merancang produk berbasis "${t}"?\n4. [Mathematics]: Parameter kuantitatif (ukuran, daya, waktu) apa saja yang perlu dihitung pada "${t}"?`;
+        }
+
         const legend = "Baru Memulai: Pasif, indikator belum terlihat, membutuhkan intervensi konstan.\nBerkembang: Mulai konsisten memunculkan perilaku namun belum stabil.\nCakap: Secara mandiri memunculkan perilaku baku secara ajeg.\nMahir: Proaktif, memberikan dampak positif bagi ritme kerja kelompok.";
         
         let soalSumatif = `TAGIHAN SUMATIF MATERI (${metode}):\n${mod.sumatif}\n\nPETUNJUK KERJA:\nSelesaikan penugasan komprehensif materi "${t}" ini secara bertanggung jawab bersama mitra kelompok Anda berdasarkan rubrik penilaian unjuk kerja terpilih!`;
         if (metode === "Project-Based Learning (PjBL)") soalSumatif = `TUGAS PROYEK MAJU:\nBuatlah purwarupa/karya nyata aplikatif terkait konsep "${t}".\n\nRubrik Penilaian:\n1. Orisinalitas & Desain Ide (20%)\n2. Proses Manufaktur & Gotong Royong (30%)\n3. Fungsionalitas Mekanik Produk (30%)\n4. Presentasi (20%)`;
         else if (metode === "Problem-Based Learning (PBL)") soalSumatif = `STUDI KASUS NYATA:\nLakukan bedah analisis mendalam pada problem rikel terkait "${t}" dan formulasikan draf solusinya!\n\nRubrik Penilaian:\n1. Kedalaman Identifikasi Akar Masalah (30%)\n2. Kelogisan & Relevansi Solusi (40%)\n3. Struktur Argumen Kelompok (30%)`;
         else if (metode === "Inquiry Learning") soalSumatif = `LAPORAN PENYELIDIKAN:\nSusunlah artikel laporan ilmiah terstruktur dari percobaan mandiri materi "${t}".\n\nRubrik Penilaian:\n1. Konstruksi Hipotesis (20%)\n2. Validitas Instrumen Data (30%)\n3. Ketajaman Analisis Kesimpulan (50%)`;
+        else if (metode === "STEM (Engineering Design Process)") soalSumatif = `TUGAS PROYEK STEM (ENGINEERING DESIGN PROCESS):\nBuatlah purwarupa dan uji coba solusi nyata terkait materi "${t}".\n\nRubrik Penilaian EDP:\n1. Identifikasi Masalah & Batasan (Ask) (20%)\n2. Kreativitas Desain & Blueprint (Imagine-Plan) (25%)\n3. Fungsionalitas Purwarupa & Ketepatan Data (Create-Test) (35%)\n4. Kualitas Iterasi & Justifikasi Perbaikan (Improve) (20%)`;
 
         return { instAwal: soalAwal, formAspek: ASPEK_MURID_MAP[indikator], formLegend: legend, instSumatif: soalSumatif };
     },

@@ -1822,7 +1822,7 @@
 
             useEffect(() => {
                 if (window.lucide) window.lucide.createIcons();
-            }, [parsedQuestions, bankSoalQuestions, parseStatus, editingQuestionIdx]);
+            }, [parsedQuestions, bankSoalQuestions, parseStatus, editingQuestionIdx, selectedQuestions, swappingSlot]);
 
             const handleInputChange = (e) => {
                 const { name, value } = e.target;

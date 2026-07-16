@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://assessmenthub.ai/schemas/lkpd.schema.json",
+  "title": "StudentWorksheet",
+  "description": "Data skema Lembar Kerja Peserta Didik (LKPD) berbasis STEM dan EDP dalam ekosistem AssessmentHub AI.",
+  "type": "object",
+  "properties": {
+    "identitas": {
+      "type": "object",
+      "properties": {
+        "topik": { "type": "string" },
+        "mapel": { "type": "string" },
+        "kelas": { "type": "string" },
+        "alokasiWaktu": { "type": "string" }
+      },
+      "required": ["topik", "mapel"]
+    },
+    "orientasiMasalah": {
+      "type": "string",
+      "description": "Deskripsi atau wacana pengantar masalah dunia nyata."
+    },
+    "kegiatanInti": {
+      "type": "object",
+      "properties": {
+        "ask": { "type": "string" },
+        "imaginePlan": { "type": "string" },
+        "create": { "type": "string" },
+        "testImprove": { "type": "string" },
+        "communicate": { "type": "string" }
+      },
+      "required": ["ask", "imaginePlan", "create", "testImprove", "communicate"]
+    },
+    "lembarData": {
+      "type": "object",
+      "properties": {
+        "deskripsi": { "type": "string" },
+        "tabelPengukuran": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ujiKe": { "type": "string" },
+              "parameter": { "type": "string" },
+              "hasil": { "type": "string" },
+              "catatan": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "refleksi": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Daftar pertanyaan reflektif pasca-aktivitas."
+    }
+  },
+  "required": ["identitas", "orientasiMasalah", "kegiatanInti"]
+}

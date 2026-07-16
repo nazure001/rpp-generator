@@ -95,7 +95,26 @@
       "properties": {
         "maxScore": { "type": "number" },
         "passingScoreKKTP": { "type": "number" },
-        "rubrics": { "type": "array" }
+        "rubrics": { "type": "array" },
+        "edpRubric": {
+          "type": "object",
+          "properties": {
+            "kriteria": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "nama": { "type": "string" },
+                  "bobot": { "type": "number" }
+                }
+              }
+            },
+            "skalaLevel": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
       }
     },
     "imageAssets": {
