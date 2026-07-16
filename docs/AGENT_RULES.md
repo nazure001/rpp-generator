@@ -30,7 +30,12 @@ Aturan ini dirancang untuk menjaga stabilitas sistem dan menjamin prinsip **Zero
 * **Alasan**: Mencegah kebocoran kredensial dan kelemahan keamanan publik pada repositori Git.
 * **Prosedur**: Gunakan pendekatan logika algoritmik kontekstual lokal, atau minta input API Key secara dinamis dari pengguna melalui antarmuka UI tanpa menyimpannya secara permanen di dalam kode repositori.
 
-### 5. Tanpa Perintah Shell Destruktif (*No Destructive Shell Commands*)
+### 5. Gunakan Gitignore untuk Menjaga Kebersihan Repositori (*Use Gitignore*)
+* **Aturan**: File lokal yang bersifat pribadi, log debug, virtual environment, rahasia/credentials, dan berkas bawaan sistem operasi harus selalu diabaikan menggunakan file `.gitignore`.
+* **Alasan**: Mencegah push berkas yang tidak relevan, sampah OS, atau kredensial sensitif secara tidak sengaja ke repositori publik.
+* **Prosedur**: Pastikan file `.gitignore` di root repositori mencakup pola pengabaian untuk OS (macOS/Windows), IDE (`.vscode/`, `.idea/`), Node.js (`node_modules/`), Python (`.venv/`), dan file rahasia (`.env`, `*.json`).
+
+### 6. Tanpa Perintah Shell Destruktif (*No Destructive Shell Commands*)
 * **Aturan**: Dilarang menjalankan perintah terminal penghapusan massal atau pengaturan ulang paksa.
 * **Alasan**: Mencegah kerusakan folder lokal, hilangnya arsip cadangan, atau keruntuhan riwayat Git.
 * **Perintah Terlarang**:
@@ -43,7 +48,7 @@ Aturan ini dirancang untuk menjaga stabilitas sistem dan menjamin prinsip **Zero
   git push --force
   ```
 
-### 6. Selalu Buat Ringkasan Perubahan (*Always Summarize Changes*)
+### 7. Selalu Buat Ringkasan Perubahan (*Always Summarize Changes*)
 * **Aturan**: Di setiap akhir penuntasan tugas atau tahap pengembangan, agen wajib menyajikan laporan ringkasan terstruktur.
 * **Alasan**: Memudahkan tinjauan (*review*) dan audit perubahan oleh pemilik proyek sebelum disetujui.
 * **Format Laporan Wajib**:
@@ -53,7 +58,7 @@ Aturan ini dirancang untuk menjaga stabilitas sistem dan menjamin prinsip **Zero
   * **RECOMMENDED NEXT PHASE**: Rekomendasi langkah prioritas berikutnya beserta tingkat risikonya.
   * **WAIT FOR APPROVAL**: Instruksi berhenti dan menunggu konfirmasi pengguna sebelum melanjutkan.
 
-### 7. Verifikasi Minimal-Disrupsi (*Run Tests or Manual Verification*)
+### 8. Verifikasi Minimal-Disrupsi (*Run Tests or Manual Verification*)
 * **Aturan**: Lakukan pengujian dan verifikasi setelah setiap perubahan kode dengan metode yang paling tidak mengganggu (*least disruptive method*).
 * **Alasan**: Memastikan stabilitas kompilasi (Babel JSX in-browser) dan fungsionalitas UI sebelum melaporkan tugas selesai.
 * **Prosedur**:
@@ -72,5 +77,6 @@ Sebelum mengajukan *Pull Request* atau menyelesaikan sesi kerja, periksa daftar 
 - [ ] Apakah `index.html` tetap utuh dan berfungsi normal tanpa error konsol?
 - [ ] Apakah saya tidak menggunakan perintah `rm`, `del`, atau `reset --hard`?
 - [ ] Apakah seluruh berkas baru bersih dari *hardcode API Key* atau *OAuth Secret*?
+- [ ] Apakah semua file lokal yang tidak perlu di-push (seperti file log, .env, konfigurasi lokal editor/IDE) sudah diabaikan menggunakan [.gitignore](file:///d:/repo/rpp-generator/.gitignore)?
 - [ ] Apakah saya telah menyusun ringkasan perubahan terstruktur (COMPLETED/VERIFIED/REMAINING/NEXT PHASE)?
 - [ ] Apakah saya telah menunggu persetujuan eksplisit pengguna sebelum lanjut ke fase berikutnya?
