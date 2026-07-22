@@ -509,6 +509,61 @@
                 URL.revokeObjectURL(url);
             };
 
+            const handleOpenAssessmentHub = () => {
+                const gradeInfo = parseGradeSemester(formData.kelas || "");
+                const draftData = {
+                    assessmentId: generateUUID(),
+                    source: {
+                        type: "lesson_plan_export",
+                        app: "Smart RPP Generator Pro"
+                    },
+                    metadata: {
+                        school: formData.sekolah || "",
+                        teacher: formData.guru || "",
+                        subject: selectedMapel || formData.mapel || "",
+                        grade: gradeInfo.grade,
+                        phase: selectedFase || "",
+                        semester: gradeInfo.semester,
+                        topic: formData.topik || "",
+                        curriculumElement: selectedElemen || "",
+                        academicYear: ""
+                    },
+                    curriculumReference: {
+                        capaianPembelajaran: DATABASE_KURIKULUM[selectedFase]?.[selectedMapel]?.[selectedElemen] || "",
+                        tujuanPembelajaran: formData.tujuanPembelajaran || "",
+                        lingkupMateri: formData.lingkupMateri || ""
+                    },
+                    assessmentPlan: {
+                        diagnostic: formData.asesmenAwal || "",
+                        formative: formData.asesmenFormatif || "",
+                        summative: formData.asesmenSumatif || ""
+                    },
+                    teacherPreferences: {
+                        questionCount: 0,
+                        questionTypes: [],
+                        cognitiveLevels: ["C2", "C3", "C4"],
+                        useIllustration: false,
+                        languageStyle: "Bahasa Indonesia formal, jelas, sesuai peserta didik SMP"
+                    },
+                    blueprint: [],
+                    questions: [],
+                    answerKey: [],
+                    scoringRules: [],
+                    validationReport: {
+                        status: "DRAFT",
+                        notes: []
+                    }
+                };
+
+                try {
+                    localStorage.setItem("active_rpp_draft", JSON.stringify(draftData));
+                    window.location.href = "asesmen.html";
+                } catch (e) {
+                    alert("Gagal menyimpan data ke penyimpanan lokal browser. Pastikan penyimpanan lokal diizinkan.");
+                    console.error(e);
+                }
+            };
+
             useEffect(() => { lucide.createIcons(); });
 
             const formatText = (text) => {
@@ -771,6 +826,7 @@
                                         <div className="flex gap-3 flex-wrap items-center">
                                             <button onClick={handleExportJSON} type="button" className="bg-brand-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-brand-500 shadow-lg transition-all"><i data-lucide="download" className="w-5 h-5"></i> Export JSON RPP</button>
                                             <button onClick={handleExportDraftAsesmen} type="button" className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-emerald-500 shadow-lg transition-all"><i data-lucide="file-check" className="w-5 h-5"></i> Export Draft Asesmen</button>
+                                            <button onClick={handleOpenAssessmentHub} type="button" className="bg-amber-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-amber-500 shadow-lg transition-all"><i data-lucide="external-link" className="w-5 h-5"></i> Buka AssessmentHub AI</button>
                                             <ButtonPrimary onClick={() => setIsGenerated(true)} icon="printer">Generate PDF & Tampilkan</ButtonPrimary>
                                         </div>
                                     </div>
@@ -786,6 +842,7 @@
                                     <div className="flex gap-3 flex-wrap">
                                         <button onClick={handleExportJSON} className="bg-brand-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-brand-500 shadow-lg"><i data-lucide="download" className="w-5 h-5"></i> Export JSON RPP</button>
                                         <button onClick={handleExportDraftAsesmen} className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-emerald-500 shadow-lg"><i data-lucide="file-check" className="w-5 h-5"></i> Export Draft Asesmen</button>
+                                        <button onClick={handleOpenAssessmentHub} className="bg-amber-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-amber-500 shadow-lg"><i data-lucide="external-link" className="w-5 h-5"></i> Buka AssessmentHub AI</button>
                                         <button onClick={() => window.print()} className="bg-white text-slate-900 px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-200 shadow-lg"><i data-lucide="printer" className="w-5 h-5"></i> Cetak Dokumen</button>
                                         <button onClick={() => setIsGenerated(false)} className="bg-slate-800 text-white border border-slate-600 px-6 py-2.5 rounded-xl font-bold hover:bg-slate-700"><i data-lucide="edit" className="w-5 h-5 inline mr-2"></i>Edit Kembali</button>
                                     </div>
